@@ -1,0 +1,1660 @@
+{
+  "secret": "golden-vector-secret",
+  "codes": [
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 1,
+      "code": "AJ27-FAM-0001-2"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 2,
+      "code": "AJ27-FAM-0002-2"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 9,
+      "code": "AJ27-FAM-0009-A"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 42,
+      "code": "AJ27-FAM-0042-W"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 999,
+      "code": "AJ27-FAM-0999-5"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 1000,
+      "code": "AJ27-FAM-1000-2"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 9999,
+      "code": "AJ27-FAM-9999-P"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 1,
+      "code": "AJ27-FRN-0001-3"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 2,
+      "code": "AJ27-FRN-0002-3"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 9,
+      "code": "AJ27-FRN-0009-B"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 42,
+      "code": "AJ27-FRN-0042-X"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 999,
+      "code": "AJ27-FRN-0999-6"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 1000,
+      "code": "AJ27-FRN-1000-3"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 9999,
+      "code": "AJ27-FRN-9999-Q"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 1,
+      "code": "AJ27-WRK-0001-G"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 2,
+      "code": "AJ27-WRK-0002-G"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 9,
+      "code": "AJ27-WRK-0009-R"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 42,
+      "code": "AJ27-WRK-0042-C"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 999,
+      "code": "AJ27-WRK-0999-K"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 1000,
+      "code": "AJ27-WRK-1000-G"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 9999,
+      "code": "AJ27-WRK-9999-6"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 1,
+      "code": "AJ27-VIP-0001-A"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 2,
+      "code": "AJ27-VIP-0002-A"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 9,
+      "code": "AJ27-VIP-0009-J"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 42,
+      "code": "AJ27-VIP-0042-6"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 999,
+      "code": "AJ27-VIP-0999-D"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 1000,
+      "code": "AJ27-VIP-1000-A"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 9999,
+      "code": "AJ27-VIP-9999-Y"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 1,
+      "code": "AJ27-GEN-0001-M"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 2,
+      "code": "AJ27-GEN-0002-M"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 9,
+      "code": "AJ27-GEN-0009-W"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 42,
+      "code": "AJ27-GEN-0042-G"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 999,
+      "code": "AJ27-GEN-0999-Q"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 1000,
+      "code": "AJ27-GEN-1000-M"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 9999,
+      "code": "AJ27-GEN-9999-A"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 1,
+      "code": "TS26-FAM-0001-9"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 2,
+      "code": "TS26-FAM-0002-9"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 9,
+      "code": "TS26-FAM-0009-H"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 42,
+      "code": "TS26-FAM-0042-5"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 999,
+      "code": "TS26-FAM-0999-C"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 1000,
+      "code": "TS26-FAM-1000-9"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 9999,
+      "code": "TS26-FAM-9999-X"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 1,
+      "code": "TS26-FRN-0001-A"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 2,
+      "code": "TS26-FRN-0002-A"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 9,
+      "code": "TS26-FRN-0009-J"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 42,
+      "code": "TS26-FRN-0042-6"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 999,
+      "code": "TS26-FRN-0999-D"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 1000,
+      "code": "TS26-FRN-1000-A"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 9999,
+      "code": "TS26-FRN-9999-Y"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 1,
+      "code": "TS26-WRK-0001-Q"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 2,
+      "code": "TS26-WRK-0002-Q"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 9,
+      "code": "TS26-WRK-0009-Z"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 42,
+      "code": "TS26-WRK-0042-K"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 999,
+      "code": "TS26-WRK-0999-U"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 1000,
+      "code": "TS26-WRK-1000-Q"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 9999,
+      "code": "TS26-WRK-9999-D"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 1,
+      "code": "TS26-VIP-0001-H"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 2,
+      "code": "TS26-VIP-0002-H"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 9,
+      "code": "TS26-VIP-0009-T"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 42,
+      "code": "TS26-VIP-0042-D"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 999,
+      "code": "TS26-VIP-0999-M"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 1000,
+      "code": "TS26-VIP-1000-H"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 9999,
+      "code": "TS26-VIP-9999-7"
+    },
+    {
+      "prefix": "TS26",
+      "category": "GEN",
+      "sequence": 1,
+      "code": "TS26-GEN-0001-V"
+    },
+    {
+      "prefix": "TS26",
+      "category": "GEN",
+      "sequence": 2,
+      "code": "TS26-GEN-0002-V"
+    },
+    {
+      "prefix": "TS26",
+      "category": "GEN",
+      "sequence": 9,
+      "code": "TS26-GEN-0009-5"
+    },
+    {
+      "prefix": "TS26",
+      "category": "GEN",
+      "sequence": 42,
+      "code": "TS26-GEN-0042-Q"
+    },
+    {
+      "prefix": "TS26",
+      "category": "GEN",
+      "sequence": 999,
+      "code": "TS26-GEN-0999-Y"
+    },
+    {
+      "prefix": "TS26",
+      "category": "GEN",
+      "sequence": 1000,
+      "code": "TS26-GEN-1000-V"
+    },
+    {
+      "prefix": "TS26",
+      "category": "GEN",
+      "sequence": 9999,
+      "code": "TS26-GEN-9999-H"
+    },
+    {
+      "prefix": "INV",
+      "category": "FAM",
+      "sequence": 1,
+      "code": "INV-FAM-0001-H"
+    },
+    {
+      "prefix": "INV",
+      "category": "FAM",
+      "sequence": 2,
+      "code": "INV-FAM-0002-H"
+    },
+    {
+      "prefix": "INV",
+      "category": "FAM",
+      "sequence": 9,
+      "code": "INV-FAM-0009-J"
+    },
+    {
+      "prefix": "INV",
+      "category": "FAM",
+      "sequence": 42,
+      "code": "INV-FAM-0042-B"
+    },
+    {
+      "prefix": "INV",
+      "category": "FAM",
+      "sequence": 999,
+      "code": "INV-FAM-0999-X"
+    },
+    {
+      "prefix": "INV",
+      "category": "FAM",
+      "sequence": 1000,
+      "code": "INV-FAM-1000-H"
+    },
+    {
+      "prefix": "INV",
+      "category": "FAM",
+      "sequence": 9999,
+      "code": "INV-FAM-9999-9"
+    },
+    {
+      "prefix": "INV",
+      "category": "FRN",
+      "sequence": 1,
+      "code": "INV-FRN-0001-3"
+    },
+    {
+      "prefix": "INV",
+      "category": "FRN",
+      "sequence": 2,
+      "code": "INV-FRN-0002-3"
+    },
+    {
+      "prefix": "INV",
+      "category": "FRN",
+      "sequence": 9,
+      "code": "INV-FRN-0009-4"
+    },
+    {
+      "prefix": "INV",
+      "category": "FRN",
+      "sequence": 42,
+      "code": "INV-FRN-0042-V"
+    },
+    {
+      "prefix": "INV",
+      "category": "FRN",
+      "sequence": 999,
+      "code": "INV-FRN-0999-F"
+    },
+    {
+      "prefix": "INV",
+      "category": "FRN",
+      "sequence": 1000,
+      "code": "INV-FRN-1000-3"
+    },
+    {
+      "prefix": "INV",
+      "category": "FRN",
+      "sequence": 9999,
+      "code": "INV-FRN-9999-T"
+    },
+    {
+      "prefix": "INV",
+      "category": "WRK",
+      "sequence": 1,
+      "code": "INV-WRK-0001-5"
+    },
+    {
+      "prefix": "INV",
+      "category": "WRK",
+      "sequence": 2,
+      "code": "INV-WRK-0002-5"
+    },
+    {
+      "prefix": "INV",
+      "category": "WRK",
+      "sequence": 9,
+      "code": "INV-WRK-0009-6"
+    },
+    {
+      "prefix": "INV",
+      "category": "WRK",
+      "sequence": 42,
+      "code": "INV-WRK-0042-X"
+    },
+    {
+      "prefix": "INV",
+      "category": "WRK",
+      "sequence": 999,
+      "code": "INV-WRK-0999-H"
+    },
+    {
+      "prefix": "INV",
+      "category": "WRK",
+      "sequence": 1000,
+      "code": "INV-WRK-1000-5"
+    },
+    {
+      "prefix": "INV",
+      "category": "WRK",
+      "sequence": 9999,
+      "code": "INV-WRK-9999-V"
+    },
+    {
+      "prefix": "INV",
+      "category": "VIP",
+      "sequence": 1,
+      "code": "INV-VIP-0001-K"
+    },
+    {
+      "prefix": "INV",
+      "category": "VIP",
+      "sequence": 2,
+      "code": "INV-VIP-0002-K"
+    },
+    {
+      "prefix": "INV",
+      "category": "VIP",
+      "sequence": 9,
+      "code": "INV-VIP-0009-M"
+    },
+    {
+      "prefix": "INV",
+      "category": "VIP",
+      "sequence": 42,
+      "code": "INV-VIP-0042-D"
+    },
+    {
+      "prefix": "INV",
+      "category": "VIP",
+      "sequence": 999,
+      "code": "INV-VIP-0999-Z"
+    },
+    {
+      "prefix": "INV",
+      "category": "VIP",
+      "sequence": 1000,
+      "code": "INV-VIP-1000-K"
+    },
+    {
+      "prefix": "INV",
+      "category": "VIP",
+      "sequence": 9999,
+      "code": "INV-VIP-9999-B"
+    },
+    {
+      "prefix": "INV",
+      "category": "GEN",
+      "sequence": 1,
+      "code": "INV-GEN-0001-X"
+    },
+    {
+      "prefix": "INV",
+      "category": "GEN",
+      "sequence": 2,
+      "code": "INV-GEN-0002-X"
+    },
+    {
+      "prefix": "INV",
+      "category": "GEN",
+      "sequence": 9,
+      "code": "INV-GEN-0009-Y"
+    },
+    {
+      "prefix": "INV",
+      "category": "GEN",
+      "sequence": 42,
+      "code": "INV-GEN-0042-Q"
+    },
+    {
+      "prefix": "INV",
+      "category": "GEN",
+      "sequence": 999,
+      "code": "INV-GEN-0999-B"
+    },
+    {
+      "prefix": "INV",
+      "category": "GEN",
+      "sequence": 1000,
+      "code": "INV-GEN-1000-X"
+    },
+    {
+      "prefix": "INV",
+      "category": "GEN",
+      "sequence": 9999,
+      "code": "INV-GEN-9999-N"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FAM",
+      "sequence": 1,
+      "code": "ZZ99-FAM-0001-Z"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FAM",
+      "sequence": 2,
+      "code": "ZZ99-FAM-0002-Z"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FAM",
+      "sequence": 9,
+      "code": "ZZ99-FAM-0009-9"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FAM",
+      "sequence": 42,
+      "code": "ZZ99-FAM-0042-V"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FAM",
+      "sequence": 999,
+      "code": "ZZ99-FAM-0999-4"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FAM",
+      "sequence": 1000,
+      "code": "ZZ99-FAM-1000-Z"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FAM",
+      "sequence": 9999,
+      "code": "ZZ99-FAM-9999-N"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FRN",
+      "sequence": 1,
+      "code": "ZZ99-FRN-0001-2"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FRN",
+      "sequence": 2,
+      "code": "ZZ99-FRN-0002-2"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FRN",
+      "sequence": 9,
+      "code": "ZZ99-FRN-0009-A"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FRN",
+      "sequence": 42,
+      "code": "ZZ99-FRN-0042-W"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FRN",
+      "sequence": 999,
+      "code": "ZZ99-FRN-0999-5"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FRN",
+      "sequence": 1000,
+      "code": "ZZ99-FRN-1000-2"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "FRN",
+      "sequence": 9999,
+      "code": "ZZ99-FRN-9999-P"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "WRK",
+      "sequence": 1,
+      "code": "ZZ99-WRK-0001-F"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "WRK",
+      "sequence": 2,
+      "code": "ZZ99-WRK-0002-F"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "WRK",
+      "sequence": 9,
+      "code": "ZZ99-WRK-0009-Q"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "WRK",
+      "sequence": 42,
+      "code": "ZZ99-WRK-0042-B"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "WRK",
+      "sequence": 999,
+      "code": "ZZ99-WRK-0999-J"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "WRK",
+      "sequence": 1000,
+      "code": "ZZ99-WRK-1000-F"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "WRK",
+      "sequence": 9999,
+      "code": "ZZ99-WRK-9999-5"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "VIP",
+      "sequence": 1,
+      "code": "ZZ99-VIP-0001-9"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "VIP",
+      "sequence": 2,
+      "code": "ZZ99-VIP-0002-9"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "VIP",
+      "sequence": 9,
+      "code": "ZZ99-VIP-0009-H"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "VIP",
+      "sequence": 42,
+      "code": "ZZ99-VIP-0042-5"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "VIP",
+      "sequence": 999,
+      "code": "ZZ99-VIP-0999-C"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "VIP",
+      "sequence": 1000,
+      "code": "ZZ99-VIP-1000-9"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "VIP",
+      "sequence": 9999,
+      "code": "ZZ99-VIP-9999-X"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "GEN",
+      "sequence": 1,
+      "code": "ZZ99-GEN-0001-K"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "GEN",
+      "sequence": 2,
+      "code": "ZZ99-GEN-0002-K"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "GEN",
+      "sequence": 9,
+      "code": "ZZ99-GEN-0009-V"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "GEN",
+      "sequence": 42,
+      "code": "ZZ99-GEN-0042-F"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "GEN",
+      "sequence": 999,
+      "code": "ZZ99-GEN-0999-P"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "GEN",
+      "sequence": 1000,
+      "code": "ZZ99-GEN-1000-K"
+    },
+    {
+      "prefix": "ZZ99",
+      "category": "GEN",
+      "sequence": 9999,
+      "code": "ZZ99-GEN-9999-9"
+    },
+    {
+      "prefix": "AB",
+      "category": "FAM",
+      "sequence": 1,
+      "code": "AB-FAM-0001-Z"
+    },
+    {
+      "prefix": "AB",
+      "category": "FAM",
+      "sequence": 2,
+      "code": "AB-FAM-0002-Z"
+    },
+    {
+      "prefix": "AB",
+      "category": "FAM",
+      "sequence": 9,
+      "code": "AB-FAM-0009-T"
+    },
+    {
+      "prefix": "AB",
+      "category": "FAM",
+      "sequence": 42,
+      "code": "AB-FAM-0042-Q"
+    },
+    {
+      "prefix": "AB",
+      "category": "FAM",
+      "sequence": 999,
+      "code": "AB-FAM-0999-P"
+    },
+    {
+      "prefix": "AB",
+      "category": "FAM",
+      "sequence": 1000,
+      "code": "AB-FAM-1000-Z"
+    },
+    {
+      "prefix": "AB",
+      "category": "FAM",
+      "sequence": 9999,
+      "code": "AB-FAM-9999-T"
+    },
+    {
+      "prefix": "AB",
+      "category": "FRN",
+      "sequence": 1,
+      "code": "AB-FRN-0001-2"
+    },
+    {
+      "prefix": "AB",
+      "category": "FRN",
+      "sequence": 2,
+      "code": "AB-FRN-0002-2"
+    },
+    {
+      "prefix": "AB",
+      "category": "FRN",
+      "sequence": 9,
+      "code": "AB-FRN-0009-U"
+    },
+    {
+      "prefix": "AB",
+      "category": "FRN",
+      "sequence": 42,
+      "code": "AB-FRN-0042-R"
+    },
+    {
+      "prefix": "AB",
+      "category": "FRN",
+      "sequence": 999,
+      "code": "AB-FRN-0999-Q"
+    },
+    {
+      "prefix": "AB",
+      "category": "FRN",
+      "sequence": 1000,
+      "code": "AB-FRN-1000-2"
+    },
+    {
+      "prefix": "AB",
+      "category": "FRN",
+      "sequence": 9999,
+      "code": "AB-FRN-9999-U"
+    },
+    {
+      "prefix": "AB",
+      "category": "WRK",
+      "sequence": 1,
+      "code": "AB-WRK-0001-Q"
+    },
+    {
+      "prefix": "AB",
+      "category": "WRK",
+      "sequence": 2,
+      "code": "AB-WRK-0002-Q"
+    },
+    {
+      "prefix": "AB",
+      "category": "WRK",
+      "sequence": 9,
+      "code": "AB-WRK-0009-H"
+    },
+    {
+      "prefix": "AB",
+      "category": "WRK",
+      "sequence": 42,
+      "code": "AB-WRK-0042-F"
+    },
+    {
+      "prefix": "AB",
+      "category": "WRK",
+      "sequence": 999,
+      "code": "AB-WRK-0999-E"
+    },
+    {
+      "prefix": "AB",
+      "category": "WRK",
+      "sequence": 1000,
+      "code": "AB-WRK-1000-Q"
+    },
+    {
+      "prefix": "AB",
+      "category": "WRK",
+      "sequence": 9999,
+      "code": "AB-WRK-9999-H"
+    },
+    {
+      "prefix": "AB",
+      "category": "VIP",
+      "sequence": 1,
+      "code": "AB-VIP-0001-V"
+    },
+    {
+      "prefix": "AB",
+      "category": "VIP",
+      "sequence": 2,
+      "code": "AB-VIP-0002-V"
+    },
+    {
+      "prefix": "AB",
+      "category": "VIP",
+      "sequence": 9,
+      "code": "AB-VIP-0009-N"
+    },
+    {
+      "prefix": "AB",
+      "category": "VIP",
+      "sequence": 42,
+      "code": "AB-VIP-0042-K"
+    },
+    {
+      "prefix": "AB",
+      "category": "VIP",
+      "sequence": 999,
+      "code": "AB-VIP-0999-J"
+    },
+    {
+      "prefix": "AB",
+      "category": "VIP",
+      "sequence": 1000,
+      "code": "AB-VIP-1000-V"
+    },
+    {
+      "prefix": "AB",
+      "category": "VIP",
+      "sequence": 9999,
+      "code": "AB-VIP-9999-N"
+    },
+    {
+      "prefix": "AB",
+      "category": "GEN",
+      "sequence": 1,
+      "code": "AB-GEN-0001-7"
+    },
+    {
+      "prefix": "AB",
+      "category": "GEN",
+      "sequence": 2,
+      "code": "AB-GEN-0002-7"
+    },
+    {
+      "prefix": "AB",
+      "category": "GEN",
+      "sequence": 9,
+      "code": "AB-GEN-0009-Z"
+    },
+    {
+      "prefix": "AB",
+      "category": "GEN",
+      "sequence": 42,
+      "code": "AB-GEN-0042-X"
+    },
+    {
+      "prefix": "AB",
+      "category": "GEN",
+      "sequence": 999,
+      "code": "AB-GEN-0999-W"
+    },
+    {
+      "prefix": "AB",
+      "category": "GEN",
+      "sequence": 1000,
+      "code": "AB-GEN-1000-7"
+    },
+    {
+      "prefix": "AB",
+      "category": "GEN",
+      "sequence": 9999,
+      "code": "AB-GEN-9999-Z"
+    }
+  ],
+  "payloads": [
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 1,
+      "code": "AJ27-FAM-0001-2",
+      "admits": 1,
+      "payload": "DWI1.AJ27.FAM.0001.1.bc910a99ad7f"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 2,
+      "code": "AJ27-FAM-0002-2",
+      "admits": 2,
+      "payload": "DWI1.AJ27.FAM.0002.2.8d3952f17bd3"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 9,
+      "code": "AJ27-FAM-0009-A",
+      "admits": 3,
+      "payload": "DWI1.AJ27.FAM.0009.3.2afcbeef6c2f"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 42,
+      "code": "AJ27-FAM-0042-W",
+      "admits": 4,
+      "payload": "DWI1.AJ27.FAM.0042.4.78a6c8733075"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 999,
+      "code": "AJ27-FAM-0999-5",
+      "admits": 5,
+      "payload": "DWI1.AJ27.FAM.0999.5.cfdcfdfd0139"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 1000,
+      "code": "AJ27-FAM-1000-2",
+      "admits": 6,
+      "payload": "DWI1.AJ27.FAM.1000.6.835fa9473a93"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FAM",
+      "sequence": 9999,
+      "code": "AJ27-FAM-9999-P",
+      "admits": 1,
+      "payload": "DWI1.AJ27.FAM.9999.1.535ca2a01005"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 1,
+      "code": "AJ27-FRN-0001-3",
+      "admits": 2,
+      "payload": "DWI1.AJ27.FRN.0001.2.d88761d5af82"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 2,
+      "code": "AJ27-FRN-0002-3",
+      "admits": 3,
+      "payload": "DWI1.AJ27.FRN.0002.3.e0fa3ed6b5d0"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 9,
+      "code": "AJ27-FRN-0009-B",
+      "admits": 4,
+      "payload": "DWI1.AJ27.FRN.0009.4.45dfbc3301b8"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 42,
+      "code": "AJ27-FRN-0042-X",
+      "admits": 5,
+      "payload": "DWI1.AJ27.FRN.0042.5.fc8c15549b3b"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 999,
+      "code": "AJ27-FRN-0999-6",
+      "admits": 6,
+      "payload": "DWI1.AJ27.FRN.0999.6.f3cf32e3087b"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 1000,
+      "code": "AJ27-FRN-1000-3",
+      "admits": 1,
+      "payload": "DWI1.AJ27.FRN.1000.1.97e451c57692"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "FRN",
+      "sequence": 9999,
+      "code": "AJ27-FRN-9999-Q",
+      "admits": 2,
+      "payload": "DWI1.AJ27.FRN.9999.2.3c4c80f59797"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 1,
+      "code": "AJ27-WRK-0001-G",
+      "admits": 3,
+      "payload": "DWI1.AJ27.WRK.0001.3.c148dad3b7ea"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 2,
+      "code": "AJ27-WRK-0002-G",
+      "admits": 4,
+      "payload": "DWI1.AJ27.WRK.0002.4.72691faf7366"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 9,
+      "code": "AJ27-WRK-0009-R",
+      "admits": 5,
+      "payload": "DWI1.AJ27.WRK.0009.5.d791823a73cc"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 42,
+      "code": "AJ27-WRK-0042-C",
+      "admits": 6,
+      "payload": "DWI1.AJ27.WRK.0042.6.aa016071dc4e"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 999,
+      "code": "AJ27-WRK-0999-K",
+      "admits": 1,
+      "payload": "DWI1.AJ27.WRK.0999.1.7679294145b5"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 1000,
+      "code": "AJ27-WRK-1000-G",
+      "admits": 2,
+      "payload": "DWI1.AJ27.WRK.1000.2.0b13c7e7e874"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "WRK",
+      "sequence": 9999,
+      "code": "AJ27-WRK-9999-6",
+      "admits": 3,
+      "payload": "DWI1.AJ27.WRK.9999.3.f50ed720cd8f"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 1,
+      "code": "AJ27-VIP-0001-A",
+      "admits": 4,
+      "payload": "DWI1.AJ27.VIP.0001.4.0815303b7e0d"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 2,
+      "code": "AJ27-VIP-0002-A",
+      "admits": 5,
+      "payload": "DWI1.AJ27.VIP.0002.5.9b502f0f6d29"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 9,
+      "code": "AJ27-VIP-0009-J",
+      "admits": 6,
+      "payload": "DWI1.AJ27.VIP.0009.6.e0b5c1a6215a"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 42,
+      "code": "AJ27-VIP-0042-6",
+      "admits": 1,
+      "payload": "DWI1.AJ27.VIP.0042.1.7575b9a35722"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 999,
+      "code": "AJ27-VIP-0999-D",
+      "admits": 2,
+      "payload": "DWI1.AJ27.VIP.0999.2.59cb9542721d"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 1000,
+      "code": "AJ27-VIP-1000-A",
+      "admits": 3,
+      "payload": "DWI1.AJ27.VIP.1000.3.a923d76bbe06"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "VIP",
+      "sequence": 9999,
+      "code": "AJ27-VIP-9999-Y",
+      "admits": 4,
+      "payload": "DWI1.AJ27.VIP.9999.4.1c097a7c3dd6"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 1,
+      "code": "AJ27-GEN-0001-M",
+      "admits": 5,
+      "payload": "DWI1.AJ27.GEN.0001.5.83122b12ff69"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 2,
+      "code": "AJ27-GEN-0002-M",
+      "admits": 6,
+      "payload": "DWI1.AJ27.GEN.0002.6.3d4ca8ffbca2"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 9,
+      "code": "AJ27-GEN-0009-W",
+      "admits": 1,
+      "payload": "DWI1.AJ27.GEN.0009.1.e0374e2a492b"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 42,
+      "code": "AJ27-GEN-0042-G",
+      "admits": 2,
+      "payload": "DWI1.AJ27.GEN.0042.2.deea78549dec"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 999,
+      "code": "AJ27-GEN-0999-Q",
+      "admits": 3,
+      "payload": "DWI1.AJ27.GEN.0999.3.e7568afb92c5"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 1000,
+      "code": "AJ27-GEN-1000-M",
+      "admits": 4,
+      "payload": "DWI1.AJ27.GEN.1000.4.e7e69e66e3ce"
+    },
+    {
+      "prefix": "AJ27",
+      "category": "GEN",
+      "sequence": 9999,
+      "code": "AJ27-GEN-9999-A",
+      "admits": 5,
+      "payload": "DWI1.AJ27.GEN.9999.5.0130389fbfc8"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 1,
+      "code": "TS26-FAM-0001-9",
+      "admits": 6,
+      "payload": "DWI1.TS26.FAM.0001.6.c9bfaa39327a"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 2,
+      "code": "TS26-FAM-0002-9",
+      "admits": 1,
+      "payload": "DWI1.TS26.FAM.0002.1.e8759d67e153"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 9,
+      "code": "TS26-FAM-0009-H",
+      "admits": 2,
+      "payload": "DWI1.TS26.FAM.0009.2.2acea262be12"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 42,
+      "code": "TS26-FAM-0042-5",
+      "admits": 3,
+      "payload": "DWI1.TS26.FAM.0042.3.b9e643cf5f03"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 999,
+      "code": "TS26-FAM-0999-C",
+      "admits": 4,
+      "payload": "DWI1.TS26.FAM.0999.4.21168b2b7c2f"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 1000,
+      "code": "TS26-FAM-1000-9",
+      "admits": 5,
+      "payload": "DWI1.TS26.FAM.1000.5.f5600a34538d"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FAM",
+      "sequence": 9999,
+      "code": "TS26-FAM-9999-X",
+      "admits": 6,
+      "payload": "DWI1.TS26.FAM.9999.6.919a6933cbc7"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 1,
+      "code": "TS26-FRN-0001-A",
+      "admits": 1,
+      "payload": "DWI1.TS26.FRN.0001.1.0e3e03623501"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 2,
+      "code": "TS26-FRN-0002-A",
+      "admits": 2,
+      "payload": "DWI1.TS26.FRN.0002.2.a80b992531bd"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 9,
+      "code": "TS26-FRN-0009-J",
+      "admits": 3,
+      "payload": "DWI1.TS26.FRN.0009.3.50efa2c9b038"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 42,
+      "code": "TS26-FRN-0042-6",
+      "admits": 4,
+      "payload": "DWI1.TS26.FRN.0042.4.f4d08a59bec7"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 999,
+      "code": "TS26-FRN-0999-D",
+      "admits": 5,
+      "payload": "DWI1.TS26.FRN.0999.5.01d21f8546c8"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 1000,
+      "code": "TS26-FRN-1000-A",
+      "admits": 6,
+      "payload": "DWI1.TS26.FRN.1000.6.2cfaf3ca98c1"
+    },
+    {
+      "prefix": "TS26",
+      "category": "FRN",
+      "sequence": 9999,
+      "code": "TS26-FRN-9999-Y",
+      "admits": 1,
+      "payload": "DWI1.TS26.FRN.9999.1.1dd9883f4a1c"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 1,
+      "code": "TS26-WRK-0001-Q",
+      "admits": 2,
+      "payload": "DWI1.TS26.WRK.0001.2.d5e1823ca52d"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 2,
+      "code": "TS26-WRK-0002-Q",
+      "admits": 3,
+      "payload": "DWI1.TS26.WRK.0002.3.2037710b9e13"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 9,
+      "code": "TS26-WRK-0009-Z",
+      "admits": 4,
+      "payload": "DWI1.TS26.WRK.0009.4.3f899ab2b48f"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 42,
+      "code": "TS26-WRK-0042-K",
+      "admits": 5,
+      "payload": "DWI1.TS26.WRK.0042.5.f03d75c69c86"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 999,
+      "code": "TS26-WRK-0999-U",
+      "admits": 6,
+      "payload": "DWI1.TS26.WRK.0999.6.b10edd364f2d"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 1000,
+      "code": "TS26-WRK-1000-Q",
+      "admits": 1,
+      "payload": "DWI1.TS26.WRK.1000.1.cbd4e30d9e20"
+    },
+    {
+      "prefix": "TS26",
+      "category": "WRK",
+      "sequence": 9999,
+      "code": "TS26-WRK-9999-D",
+      "admits": 2,
+      "payload": "DWI1.TS26.WRK.9999.2.0c2c92162116"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 1,
+      "code": "TS26-VIP-0001-H",
+      "admits": 3,
+      "payload": "DWI1.TS26.VIP.0001.3.4ba03d87f0f9"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 2,
+      "code": "TS26-VIP-0002-H",
+      "admits": 4,
+      "payload": "DWI1.TS26.VIP.0002.4.2e859bba5533"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 9,
+      "code": "TS26-VIP-0009-T",
+      "admits": 5,
+      "payload": "DWI1.TS26.VIP.0009.5.018cb2a0deef"
+    },
+    {
+      "prefix": "TS26",
+      "category": "VIP",
+      "sequence": 42,
+      "code": "TS26-VIP-0042-D",
+      "admits": 6,
+      "payload": "DWI1.TS26.VIP.0042.6.5ae78ebc6a4e"
+    }
+  ],
+  "parse": [
+    {
+      "raw": "aj27-fam-0001-2",
+      "result": "AJ27-FAM-0001-2"
+    },
+    {
+      "raw": " AJ27-FAM-0001-2 ",
+      "result": "AJ27-FAM-0001-2"
+    },
+    {
+      "raw": "AJ27-FAM-0001-3",
+      "result": null
+    },
+    {
+      "raw": "AJ27-XXX-0001-2",
+      "result": null
+    },
+    {
+      "raw": "AJ27FAM00012",
+      "result": null
+    },
+    {
+      "raw": "TS26-WRK-0005-5",
+      "result": "TS26-WRK-0005-5"
+    },
+    {
+      "raw": "",
+      "result": null
+    }
+  ],
+  "verify": [
+    {
+      "raw": "DWI1.AJ27.FAM.0001.1.bc910a99ad7f",
+      "valid": true,
+      "reason": null,
+      "code": "AJ27-FAM-0001-2"
+    },
+    {
+      "raw": "DWI1.AJ27.FAM.0001.1.bc910a99ad70",
+      "valid": false,
+      "reason": "bad_signature",
+      "code": null
+    },
+    {
+      "raw": "DWI2.AJ27.FAM.0001.2.000000000000",
+      "valid": false,
+      "reason": "unknown_version",
+      "code": null
+    },
+    {
+      "raw": "DWI1.AJ27.FAM.0001.2",
+      "valid": false,
+      "reason": "malformed",
+      "code": null
+    },
+    {
+      "raw": "DWI1.AJ27.FAM.1000.6.835fa9473a93",
+      "valid": true,
+      "reason": null,
+      "code": "AJ27-FAM-1000-2"
+    }
+  ],
+  "categories": [
+    {
+      "raw": "keluarga",
+      "code": "FAM"
+    },
+    {
+      "raw": "Kantor",
+      "code": "WRK"
+    },
+    {
+      "raw": "VIP",
+      "code": "VIP"
+    },
+    {
+      "raw": "vvip",
+      "code": "VIP"
+    },
+    {
+      "raw": "",
+      "code": "GEN"
+    },
+    {
+      "raw": "random",
+      "code": "GEN"
+    },
+    {
+      "raw": "frn",
+      "code": "FRN"
+    },
+    {
+      "raw": " teman ",
+      "code": "FRN"
+    }
+  ],
+  "prefixes": [
+    {
+      "slug": "alex-ajeng",
+      "year": 2027,
+      "prefix": "AJ27"
+    },
+    {
+      "slug": "tari-saefulloh",
+      "year": 2026,
+      "prefix": "TS26"
+    },
+    {
+      "slug": "ayu-arif",
+      "year": 2026,
+      "prefix": "AR26"
+    },
+    {
+      "slug": "budi",
+      "year": 2025,
+      "prefix": "BU25"
+    },
+    {
+      "slug": "a-a",
+      "year": 2030,
+      "prefix": "AX30"
+    }
+  ]
+}
