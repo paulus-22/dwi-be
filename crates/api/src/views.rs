@@ -61,8 +61,12 @@ pub struct EventInfo {
 
 impl From<&EventRow> for EventInfo {
     fn from(e: &EventRow) -> Self {
-        let couple_line = (e.bride_short_name.is_some() || e.groom_short_name.is_some())
-            .then(|| couple_line(e.bride_short_name.as_deref().unwrap_or(""), e.groom_short_name.as_deref().unwrap_or("")));
+        let couple_line = (e.bride_short_name.is_some() || e.groom_short_name.is_some()).then(|| {
+            couple_line(
+                e.bride_short_name.as_deref().unwrap_or(""),
+                e.groom_short_name.as_deref().unwrap_or(""),
+            )
+        });
         let display_name = if e.kind == "GENERIC" {
             e.title.clone().unwrap_or_else(|| e.slug.clone())
         } else {

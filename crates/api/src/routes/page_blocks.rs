@@ -36,6 +36,21 @@ pub struct PageBlock {
 
 const BLOCK_COLUMNS: &str = "id, block_type, config, sort_order, is_visible";
 
+/// Shared by the admin list and the public page. The public page passes
+/// `visible_only = true`: a hidden block is a draft section, not public content.
+pub async fn load_blocks(db: &sqlx::PgPool, event_id: Uuid, visible_only: bool) -> ApiResult<Vec<PageBlock>> {
+    let blocks = sqlx::query_as::<_, PageBlock>(sqlx::AssertSqlSafe(format!(
+        "SELECT {BLOCK_COLUMNS} FROM event_page_block
+         WHERE event_id = $1 AND (is_visible OR NOT $2)
+         ORDER BY sort_order, created_at"
+    )))
+    .bind(event_id)
+    .bind(visible_only)
+    .fetch_all(db)
+    .await?;
+    Ok(blocks)
+}
+
 /// Body of both create and update: PUT replaces the whole block.
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -76,12 +91,7 @@ pub async fn list(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
     admin.require_event(&state, id, Role::Viewer).await?;
-    let blocks = sqlx::query_as::<_, PageBlock>(sqlx::AssertSqlSafe(format!(
-        "SELECT {BLOCK_COLUMNS} FROM event_page_block WHERE event_id = $1 ORDER BY sort_order, created_at"
-    )))
-    .bind(id)
-    .fetch_all(&state.db)
-    .await?;
+    let blocks = load_blocks(&state.db, id, false).await?;
     Ok(Json(json!({ "blocks": blocks })))
 }
 

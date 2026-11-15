@@ -903,3 +903,348 @@ async fn public_rsvp_saves_dynamic_responses(pool: PgPool) {
         StatusCode::NOT_FOUND
     );
 }
+
+// ------------------------------------------------------- public site (read)
+
+#[sqlx::test(migrations = false)]
+async fn public_wedding_event_payload(pool: PgPool) {
+    let app = app(pool.clone()).await;
+    let ev = app.demo.event_id;
+    // Ceremonies sort by sortOrder; add the other child tables.
+    sqlx::query(
+        r#"INSERT INTO "ceremony" ("id","eventId","nameId","nameEn","startsAt","venueName","sortOrder")
+           VALUES (gen_random_uuid(), $1, 'Resepsi', 'Reception', '2027-05-15 06:00', 'Ballroom', 1)"#,
+    )
+    .bind(ev)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(
+        r#"INSERT INTO "story_milestone" ("id","eventId","titleId","titleEn","bodyId","bodyEn","sortOrder")
+           VALUES (gen_random_uuid(), $1, 'Bertemu', 'Met', 'a', 'b', 0)"#,
+    )
+    .bind(ev)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(r#"INSERT INTO "rundown_item" ("id","eventId","timeLabel","titleId","titleEn","sortOrder") VALUES (gen_random_uuid(), $1, '10.00', 'Akad', 'Ceremony', 0)"#)
+        .bind(ev)
+        .execute(&pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        r#"INSERT INTO "gift_account" ("id","eventId","institution","accountNumber","accountHolder","sortOrder")
+           VALUES (gen_random_uuid(), $1, 'BCA', '123', 'Ajeng', 0)"#,
+    )
+    .bind(ev)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query(r#"UPDATE "event" SET "giftAddress" = 'Jl. Mawar 1', "interludePhotos" = ARRAY['a.jpg'] WHERE "id" = $1"#)
+        .bind(ev)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let (s, b) = app.call("GET", "/v1/public/events/alex-ajeng", None, None).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let e = &b["event"];
+    assert_eq!(e["kind"], "WEDDING");
+    assert_eq!(e["brideShortName"], "Ajeng");
+    assert_eq!(e["groomFullName"], "Alexander Wiratama");
+    assert_eq!(e["defaultLocale"], "ID");
+    assert_eq!(e["theme"], "sage-peach");
+    assert_eq!(e["bilingual"], true);
+    assert_eq!(e["hashtag"], "#AlexAjengForever");
+    assert_eq!(e["headlineDate"], "2027-05-15T03:00:00Z");
+    assert_eq!(e["giftAddress"], "Jl. Mawar 1");
+    assert_eq!(e["interludePhotos"], json!(["a.jpg"]));
+    assert_eq!(e["dressCodeColors"], json!([]));
+    assert!(e.get("coverPhotoUrl").is_some() && e["coverBackgroundUrl"].is_null());
+    assert!(e.get("codePrefix").is_none(), "internal field must not leak");
+    let names: Vec<_> = b["ceremonies"].as_array().unwrap().iter().map(|c| c["nameId"].clone()).collect();
+    assert_eq!(names, vec![json!("Akad Nikah"), json!("Resepsi")]);
+    assert_eq!(b["milestones"][0]["titleEn"], "Met");
+    assert_eq!(b["rundown"][0]["timeLabel"], "10.00");
+    assert_eq!(b["giftAccounts"][0]["kind"], "BANK");
+
+    // DRAFT, ARCHIVED and unknown slugs are all 404.
+    assert_eq!(app.call("GET", "/v1/public/events/nope", None, None).await.0, StatusCode::NOT_FOUND);
+    for status in ["DRAFT", "ARCHIVED"] {
+        sqlx::query(r#"UPDATE "event" SET "status" = $2::"EventStatus" WHERE "id" = $1"#)
+            .bind(ev)
+            .bind(status)
+            .execute(&pool)
+            .await
+            .unwrap();
+        assert_eq!(
+            app.call("GET", "/v1/public/events/alex-ajeng", None, None).await.0,
+            StatusCode::NOT_FOUND
+        );
+    }
+}
+
+#[sqlx::test(migrations = false)]
+async fn public_generic_event_has_title_and_visible_blocks(pool: PgPool) {
+    let app = app(pool.clone()).await;
+    let id: Uuid = sqlx::query_scalar(
+        r#"INSERT INTO "event" ("id","slug","status","kind","title","subtitle","description","headlineDate","updatedAt")
+           VALUES (gen_random_uuid(),'tech-day','PUBLISHED','GENERIC','Tech Day','Annual','About it','2027-01-01 02:00',now())
+           RETURNING "id""#,
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    for (ty, order, visible) in [("MAP", 2, true), ("COVER", 1, true), ("GALLERY", 3, false)] {
+        sqlx::query("INSERT INTO event_page_block (event_id, block_type, sort_order, is_visible) VALUES ($1,$2,$3,$4)")
+            .bind(id)
+            .bind(ty)
+            .bind(order)
+            .bind(visible)
+            .execute(&pool)
+            .await
+            .unwrap();
+    }
+    let (s, b) = app.call("GET", "/v1/public/events/tech-day", None, None).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(b["event"]["title"], "Tech Day");
+    assert_eq!(b["event"]["subtitle"], "Annual");
+    assert_eq!(b["event"]["description"], "About it");
+    assert_eq!(b["event"]["kind"], "GENERIC");
+    assert_eq!(b["event"]["status"], "PUBLISHED");
+    assert_eq!(b["event"]["headlineDate"], "2027-01-01T02:00:00Z");
+    assert!(b.get("ceremonies").is_none());
+    let types: Vec<_> = b["blocks"].as_array().unwrap().iter().map(|x| x["blockType"].clone()).collect();
+    assert_eq!(types, vec![json!("COVER"), json!("MAP")], "ordered, hidden block omitted");
+}
+
+#[sqlx::test(migrations = false)]
+async fn public_guest_lookup(pool: PgPool) {
+    let app = app(pool.clone()).await;
+    let base = "/v1/public/events/alex-ajeng/guest";
+
+    let (s, b) =
+        app.call("GET", &format!("{base}?token={}", app.demo.codes[0].to_lowercase()), None, None).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(b["guest"]["token"], app.demo.codes[0]);
+    assert_eq!(b["guest"]["householdName"], "Keluarga Bpk. Hartono");
+    assert_eq!(b["guest"]["plusGuestAllowance"], 3);
+    assert_eq!(b["guest"]["rsvp"]["attending"], true);
+    assert_eq!(b["guest"]["rsvp"]["guestCount"], 4);
+
+    // No RSVP yet: rsvp is null.
+    let (_, b) = app.call("GET", &format!("{base}?token={}", app.demo.codes[3]), None, None).await;
+    assert!(b["guest"]["id"].is_string() && b["guest"]["rsvp"].is_null());
+
+    // Missing, unknown, and foreign-event tokens are all `guest: null`, not 404.
+    sqlx::query(
+        r#"INSERT INTO "event" ("id","slug","status","brideShortName","brideFullName","groomShortName","groomFullName","headlineDate","updatedAt")
+           VALUES (gen_random_uuid(),'other','PUBLISHED','A','A','B','B','2027-01-01',now())"#,
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    for uri in [
+        base.to_string(),
+        format!("{base}?token="),
+        format!("{base}?token=AJ27-XXX-9999-9"),
+        "/v1/public/events/other/guest?token=".to_string() + &app.demo.codes[0],
+    ] {
+        let (s, b) = app.call("GET", &uri, None, None).await;
+        assert_eq!(s, StatusCode::OK, "{uri}");
+        assert!(b["guest"].is_null(), "{uri}: {b}");
+    }
+    assert_eq!(
+        app.call("GET", &format!("{base}?token=x").replace("alex-ajeng", "nope"), None, None).await.0,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[sqlx::test(migrations = false)]
+async fn public_voucher_three_states(pool: PgPool) {
+    let app = app(pool.clone()).await;
+    let uri = |t: &str| format!("/v1/public/events/alex-ajeng/voucher?token={t}");
+    let secret = b"golden-vector-secret";
+
+    // unknown: no token / bad token
+    for u in ["/v1/public/events/alex-ajeng/voucher".to_string(), uri("AJ27-XXX-9999-9")] {
+        let (s, b) = app.call("GET", &u, None, None).await;
+        assert_eq!((s, b), (StatusCode::OK, json!({ "status": "unknown" })));
+    }
+
+    // pending (no RSVP) and pending + declined
+    let (_, b) = app.call("GET", &uri(&app.demo.codes[3]), None, None).await;
+    assert_eq!(b["status"], "pending");
+    assert_eq!(b["declined"], false);
+    assert_eq!(b["guest"]["displayName"], "Sinta Maharani");
+    let (_, b) = app.call("GET", &uri(&app.demo.codes[4]), None, None).await;
+    assert_eq!((b["status"].clone(), b["declined"].clone()), (json!("pending"), json!(true)));
+
+    // issued: signed payload that the scanner-side verifier accepts
+    let (_, b) = app.call("GET", &uri(&app.demo.codes[1].to_lowercase()), None, None).await;
+    assert_eq!(b["status"], "issued");
+    assert_eq!(b["admits"], 2);
+    let fields =
+        dwi_domain::verify_qr_payload(secret, b["qrPayload"].as_str().unwrap()).expect("valid signature");
+    assert_eq!(fields.code(), app.demo.codes[1]);
+    assert_eq!(fields.admits, 2);
+
+    // admits is capped by the allowance (3 + 1) and floored at 1.
+    sqlx::query(r#"UPDATE "rsvp" SET "guestCount" = 9 WHERE "guestId" = (SELECT "id" FROM "guest" WHERE "token" = $1)"#)
+        .bind(&app.demo.codes[0])
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (_, b) = app.call("GET", &uri(&app.demo.codes[0]), None, None).await;
+    assert_eq!(b["admits"], 4);
+    sqlx::query(r#"UPDATE "rsvp" SET "guestCount" = 0 WHERE "guestId" = (SELECT "id" FROM "guest" WHERE "token" = $1)"#)
+        .bind(&app.demo.codes[0])
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (_, b) = app.call("GET", &uri(&app.demo.codes[0]), None, None).await;
+    assert_eq!(b["admits"], 1);
+
+    // An unparseable stored code falls back to the bare token.
+    sqlx::query(r#"UPDATE "guest" SET "token" = 'LEGACY-1' WHERE "token" = $1"#)
+        .bind(&app.demo.codes[1])
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (_, b) = app.call("GET", &uri("legacy-1"), None, None).await;
+    assert_eq!((b["status"].clone(), b["qrPayload"].clone()), (json!("issued"), json!("LEGACY-1")));
+}
+
+async fn seed_wishes(pool: &PgPool, event: Uuid, n: i32) {
+    sqlx::query(
+        r#"INSERT INTO "wish" ("id","eventId","name","message","createdAt")
+           SELECT gen_random_uuid(), $1, 'Tamu ' || i, 'Pesan ' || i,
+                  (now() AT TIME ZONE 'UTC') - (i * interval '1 minute')
+           FROM generate_series(1, $2) AS i"#,
+    )
+    .bind(event)
+    .bind(n)
+    .execute(pool)
+    .await
+    .unwrap();
+}
+
+#[sqlx::test(migrations = false)]
+async fn public_wishes_paginate_by_cursor(pool: PgPool) {
+    let app = app(pool.clone()).await;
+    seed_wishes(&pool, app.demo.event_id, 12).await;
+    sqlx::query(r#"UPDATE "wish" SET "isHidden" = true WHERE "name" = 'Tamu 1'"#)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let base = "/v1/public/events/alex-ajeng/wishes";
+
+    // 11 visible; default page is 10, newest first, hidden skipped.
+    let (s, p1) = app.call("GET", base, None, None).await;
+    assert_eq!(s, StatusCode::OK, "{p1}");
+    let w1 = p1["wishes"].as_array().unwrap();
+    assert_eq!(w1.len(), 10);
+    assert_eq!(w1[0]["name"], "Tamu 2");
+    assert!(w1[0]["createdAt"].is_string());
+    let cursor = p1["nextCursor"].as_str().unwrap();
+    assert_eq!(cursor, w1[9]["id"]);
+
+    let (_, p2) = app.call("GET", &format!("{base}?cursor={cursor}"), None, None).await;
+    assert_eq!(p2["wishes"].as_array().unwrap().len(), 1);
+    assert_eq!(p2["wishes"][0]["name"], "Tamu 12");
+    assert!(p2["nextCursor"].is_null());
+
+    let (_, b) = app.call("GET", &format!("{base}?limit=4"), None, None).await;
+    assert_eq!(b["wishes"].as_array().unwrap().len(), 4);
+    assert!(b["nextCursor"].is_string());
+
+    assert_eq!(app.call("GET", &format!("{base}?cursor=zzz"), None, None).await.0, StatusCode::BAD_REQUEST);
+    let (_, b) = app.call("GET", &format!("{base}?cursor={}", Uuid::new_v4()), None, None).await;
+    assert_eq!(b["wishes"], json!([]));
+}
+
+#[sqlx::test(migrations = false)]
+async fn public_wish_create_and_duplicate_suppression(pool: PgPool) {
+    let app = app(pool.clone()).await;
+    let uri = "/v1/public/events/alex-ajeng/wishes";
+
+    let (s, b) = app
+        .call("POST", uri, None, Some(json!({ "token": app.demo.codes[0].to_lowercase(), "name": " Dimas ", "message": " Selamat! " })))
+        .await;
+    assert_eq!(s, StatusCode::CREATED, "{b}");
+    assert_eq!(b["wish"]["name"], "Dimas");
+    assert_eq!(b["wish"]["message"], "Selamat!");
+    let id = b["wish"]["id"].clone();
+    let attributed: Option<Uuid> =
+        sqlx::query_scalar(r#"SELECT "guestId" FROM "wish" WHERE "id" = $1::uuid"#)
+            .bind(id.as_str().unwrap())
+            .fetch_one(&pool)
+            .await
+            .unwrap();
+    assert!(attributed.is_some(), "token resolves to the guest");
+
+    // Same text again: existing row, 200, no second insert.
+    let (s, b) = app.call("POST", uri, None, Some(json!({ "name": "Dimas", "message": "Selamat!" }))).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(b["wish"]["id"], id);
+
+    // Outside the 5-minute window it is a new wish; a bad token stays anonymous.
+    sqlx::query(r#"UPDATE "wish" SET "createdAt" = "createdAt" - interval '6 minutes'"#)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let (s, b) = app
+        .call(
+            "POST",
+            uri,
+            None,
+            Some(json!({ "token": "AJ27-XXX-9999-9", "name": "Dimas", "message": "Selamat!" })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::CREATED, "{b}");
+    assert_ne!(b["wish"]["id"], id);
+    let count: i64 = sqlx::query_scalar(r#"SELECT count(*) FROM "wish""#).fetch_one(&pool).await.unwrap();
+    assert_eq!(count, 2);
+
+    // Validation, and non-PUBLISHED events refuse wishes.
+    for bad in [
+        json!({ "name": "", "message": "x" }),
+        json!({ "name": "x", "message": "  " }),
+        json!({ "name": "x", "message": "m".repeat(601) }),
+    ] {
+        let (s, b) = app.call("POST", uri, None, Some(bad)).await;
+        assert_eq!(s, StatusCode::BAD_REQUEST);
+        assert_eq!(b["error"]["code"], "invalid_input");
+    }
+    assert_eq!(
+        app.call("POST", "/v1/public/events/nope/wishes", None, Some(json!({ "name": "x", "message": "y" })))
+            .await
+            .0,
+        StatusCode::NOT_FOUND
+    );
+    sqlx::query(r#"UPDATE "event" SET "status" = 'DRAFT' WHERE "id" = $1"#)
+        .bind(app.demo.event_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    assert_eq!(
+        app.call("POST", uri, None, Some(json!({ "name": "x", "message": "y" }))).await.0,
+        StatusCode::NOT_FOUND
+    );
+}
+
+#[sqlx::test(migrations = false)]
+async fn public_wishes_are_rate_limited_with_redis(pool: PgPool) {
+    let Some(url) = redis_url() else { return eprintln!("skipped: TEST_REDIS_URL not set") };
+    let redis = Redis::connect(&url, &format!("test-{}", Uuid::new_v4())).await.unwrap();
+    let app = app_with(pool, false, Some(redis)).await;
+    let uri = "/v1/public/events/alex-ajeng/wishes";
+    for i in 0..3 {
+        let (s, b) =
+            app.call("POST", uri, None, Some(json!({ "name": "A", "message": format!("m{i}") }))).await;
+        assert_eq!(s, StatusCode::CREATED, "{b}");
+    }
+    let (s, b) = app.call("POST", uri, None, Some(json!({ "name": "A", "message": "m3" }))).await;
+    assert_eq!(s, StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(b["error"]["code"], "rate_limited");
+}

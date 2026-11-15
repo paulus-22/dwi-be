@@ -5,6 +5,7 @@ pub mod live;
 pub mod page_blocks;
 pub mod photos;
 pub mod public;
+pub mod public_site;
 pub mod scanner;
 
 use axum::Json;
@@ -49,6 +50,10 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/events/{id}/page-blocks", get(page_blocks::list).post(page_blocks::create))
         .route("/page-blocks/{id}", put(page_blocks::update).delete(page_blocks::delete))
         // public guest side (no session)
+        .route("/public/events/{slug}", get(public_site::event))
+        .route("/public/events/{slug}/guest", get(public_site::guest))
+        .route("/public/events/{slug}/voucher", get(public_site::voucher))
+        .route("/public/events/{slug}/wishes", get(public_site::wishes).post(public_site::create_wish))
         .route("/public/events/{slug}/form-fields", get(public::form_fields))
         .route("/public/events/{slug}/guests/{token}/rsvp", post(public::rsvp))
         // door devices

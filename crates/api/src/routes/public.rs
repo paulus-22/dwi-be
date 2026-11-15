@@ -18,7 +18,7 @@ use crate::routes::forms::load_fields;
 use crate::state::AppState;
 use crate::whatsapp;
 
-async fn published_event(state: &AppState, slug: &str) -> ApiResult<Uuid> {
+pub(crate) async fn published_event(state: &AppState, slug: &str) -> ApiResult<Uuid> {
     sqlx::query_scalar(r#"SELECT "id" FROM "event" WHERE "slug" = $1 AND "status" = 'PUBLISHED'"#)
         .bind(slug)
         .fetch_optional(&state.db)
