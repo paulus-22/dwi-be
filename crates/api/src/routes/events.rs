@@ -501,6 +501,83 @@ pub async fn guests(
     Ok(Json(json!({ "guests": guests })))
 }
 
+/// `POST /v1/events/{id}/guests` — adds one guest to a closed, admin-managed
+/// list and mints their unique invite code on the spot (same model the
+/// wedding product already uses: the admin decides who's invited, each gets
+/// their own link, no quota/pool involved — unlike `ticket_types`, which is
+/// for open self-registration instead).
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GuestInput {
+    household_name: String,
+    phone: Option<String>,
+    #[serde(default)]
+    plus_guest_allowance: i32,
+    category: Option<String>,
+}
+
+pub async fn create_guest(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(event_id): Path<Uuid>,
+    Json(body): Json<GuestInput>,
+) -> ApiResult<Json<Value>> {
+    admin.require_event(&state, event_id, Role::Organizer).await?;
+    let name = body.household_name.trim().to_string();
+    if name.is_empty() || name.chars().count() > 120 {
+        return Err(ApiError::bad_request(
+            "invalid_name",
+            "Nama tamu/peserta wajib diisi (maks. 120 karakter).",
+        ));
+    }
+    if !(0..=20).contains(&body.plus_guest_allowance) {
+        return Err(ApiError::bad_request("invalid_allowance", "Jumlah tambahan harus antara 0 dan 20."));
+    }
+    let phone = body.phone.as_deref().map(str::trim).filter(|p| !p.is_empty());
+    let category_code = dwi_domain::to_category_code(body.category.as_deref());
+    let category_label = category_code.label();
+
+    // Same global-prefix-scoped sequence as ticket_types::generate_pool and
+    // registration::register — `token` is globally unique, `codePrefix`
+    // isn't guaranteed unique between events.
+    let mut tx = state.db.begin().await?;
+    let prefix: String = sqlx::query_scalar(r#"SELECT "codePrefix" FROM "event" WHERE "id" = $1"#)
+        .bind(event_id)
+        .fetch_optional(&mut *tx)
+        .await?
+        .ok_or_else(|| ApiError::not_found("Acara tidak ditemukan."))?;
+    let next_seq: i32 = sqlx::query_scalar(
+        r#"SELECT COALESCE(MAX(g."sequence"), 0) + 1 FROM "guest" g JOIN "event" e ON e."id" = g."eventId"
+           WHERE e."codePrefix" = $1"#,
+    )
+    .bind(&prefix)
+    .fetch_one(&mut *tx)
+    .await?;
+    let token = dwi_domain::build_invite_code(&prefix, category_code, next_seq as u32);
+
+    let guest_id: Uuid = sqlx::query_scalar(
+        r#"INSERT INTO "guest"
+               ("id", "eventId", "householdName", "token", "sequence", "plusGuestAllowance", "category",
+                "phone", "codeLockedAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, now(), now())
+           RETURNING "id""#,
+    )
+    .bind(event_id)
+    .bind(&name)
+    .bind(&token)
+    .bind(next_seq)
+    .bind(body.plus_guest_allowance)
+    .bind(category_label)
+    .bind(phone)
+    .fetch_one(&mut *tx)
+    .await?;
+    tx.commit().await?;
+
+    Ok(Json(json!({
+        "guest": { "id": guest_id, "code": token, "householdName": name, "category": category_label },
+    })))
+}
+
 // -------------------------------------------------------------- attendance
 
 #[derive(sqlx::FromRow, Serialize)]
