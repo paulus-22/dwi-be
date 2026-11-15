@@ -129,7 +129,7 @@ const VALID_STATUSES: &[&str] = &["DRAFT", "PUBLISHED", "ARCHIVED"];
 /// GENERIC events pick from a small fixed set, deliberately separate from
 /// the wedding product's much larger theme registry (different visual
 /// language entirely — see dwi-fe's `GENERIC_THEMES`).
-const VALID_GENERIC_THEMES: &[&str] = &["corporate-classic", "corporate-soft"];
+const VALID_GENERIC_THEMES: &[&str] = &["corporate-classic", "corporate-soft", "editorial"];
 
 pub async fn create(
     State(state): State<AppState>,
