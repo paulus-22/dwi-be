@@ -60,6 +60,99 @@ pub async fn list(State(state): State<AppState>, AdminUser(admin): AdminUser) ->
     Ok(Json(json!({ "events": events })))
 }
 
+/// `POST /v1/events` — creates a GENERIC event (the admin-created "Acara"
+/// product). WEDDING events are still created in the old app for now; this
+/// endpoint deliberately rejects any other `kind` rather than half-support it.
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NewEvent {
+    kind: String,
+    slug: String,
+    title: String,
+    subtitle: Option<String>,
+    description: Option<String>,
+    headline_date: DateTime<Utc>,
+    timezone: Option<String>,
+}
+
+/// Lowercase letters, digits and hyphens, no leading/trailing/double hyphen —
+/// the same shape the public `/e/[slug]` route expects in a URL.
+fn valid_slug(s: &str) -> bool {
+    !s.is_empty()
+        && !s.starts_with('-')
+        && !s.ends_with('-')
+        && !s.contains("--")
+        && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
+}
+
+pub async fn create(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Json(body): Json<NewEvent>,
+) -> ApiResult<Json<Value>> {
+    if body.kind != "GENERIC" {
+        return Err(ApiError::bad_request(
+            "unsupported_kind",
+            "Saat ini hanya acara non-wedding yang bisa dibuat di sini.",
+        ));
+    }
+    let slug = body.slug.trim().to_lowercase();
+    if !valid_slug(&slug) {
+        return Err(ApiError::bad_request(
+            "invalid_slug",
+            "Slug hanya boleh huruf kecil, angka, dan tanda hubung (tanpa hubung ganda/di ujung).",
+        ));
+    }
+    let title = body.title.trim().to_string();
+    if title.is_empty() || title.chars().count() > 160 {
+        return Err(ApiError::bad_request("invalid_title", "Judul acara wajib diisi (maks. 160 karakter)."));
+    }
+    let timezone = body.timezone.unwrap_or_else(|| "Asia/Jakarta".to_string());
+
+    let exists: bool = sqlx::query_scalar(r#"SELECT EXISTS (SELECT 1 FROM "event" WHERE "slug" = $1)"#)
+        .bind(&slug)
+        .fetch_one(&state.db)
+        .await?;
+    if exists {
+        return Err(ApiError::new(
+            axum::http::StatusCode::CONFLICT,
+            "slug_taken",
+            "Slug ini sudah dipakai acara lain.",
+        ));
+    }
+
+    let id = Uuid::new_v4();
+    sqlx::query(
+        r#"INSERT INTO "event"
+            ("id", "slug", "status", "kind", "title", "subtitle", "description", "headlineDate", "timezone", "updatedAt")
+           VALUES ($1, $2, 'DRAFT', 'GENERIC', $3, $4, $5, $6, $7, now())"#,
+    )
+    .bind(id)
+    .bind(&slug)
+    .bind(&title)
+    .bind(body.subtitle.as_deref().map(str::trim).filter(|s| !s.is_empty()))
+    .bind(body.description.as_deref().map(str::trim).filter(|s| !s.is_empty()))
+    .bind(body.headline_date)
+    .bind(&timezone)
+    .execute(&state.db)
+    .await?;
+
+    // The creator is the owner — every other admin can be invited later.
+    sqlx::query(
+        r#"INSERT INTO "event_membership" ("id", "adminId", "eventId", "role")
+           VALUES (gen_random_uuid(), $1, $2, 'OWNER')"#,
+    )
+    .bind(admin.id)
+    .bind(id)
+    .execute(&state.db)
+    .await?;
+
+    let e = load_event(&state, id).await?;
+    Ok(Json(json!({
+        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role: Role::Owner }
+    })))
+}
+
 pub async fn load_event(state: &AppState, id: Uuid) -> ApiResult<EventRow> {
     sqlx::query_as::<_, EventRow>(sqlx::AssertSqlSafe(format!(r#"{EVENT_SELECT} WHERE e."id" = $1"#)))
         .bind(id)

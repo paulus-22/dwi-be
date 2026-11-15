@@ -33,7 +33,7 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/auth/password", post(auth::change_password))
         .route("/me", get(auth::me))
         // admin: events
-        .route("/events", get(events::list))
+        .route("/events", get(events::list).post(events::create))
         .route("/events/{id}", get(events::get))
         .route("/events/{id}/guests", get(events::guests))
         .route("/events/{id}/attendance", get(events::attendance))

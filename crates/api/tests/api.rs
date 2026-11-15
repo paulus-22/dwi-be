@@ -112,6 +112,74 @@ fn check_in(code: &str, headcount: i32, at: &str) -> Value {
             "deviceName": "ignored", "override": false, "synced": false })
 }
 
+// --------------------------------------------------------------- creation
+
+#[sqlx::test(migrations = false)]
+async fn creates_a_generic_event_and_owns_it(pool: PgPool) {
+    let app = app(pool.clone()).await;
+    let token = app.login().await;
+
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/events",
+            Some(&token),
+            Some(json!({
+                "kind": "GENERIC", "slug": "conf-2027", "title": "Konferensi 2027",
+                "subtitle": "Dibuat lewat dashboard", "headlineDate": "2027-03-10T09:00:00Z",
+                "timezone": "Asia/Jakarta",
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(b["event"]["slug"], "conf-2027");
+    assert_eq!(b["event"]["kind"], "GENERIC");
+    assert_eq!(b["event"]["status"], "DRAFT");
+    assert_eq!(b["event"]["role"], "OWNER");
+    assert_eq!(b["event"]["displayName"], "Konferensi 2027");
+
+    // It shows up in the list with the creator as OWNER.
+    let (s, b) = app.call("GET", "/v1/events", Some(&token), None).await;
+    assert_eq!(s, StatusCode::OK);
+    assert!(b["events"].as_array().unwrap().iter().any(|e| e["slug"] == "conf-2027" && e["role"] == "OWNER"));
+
+    // Duplicate slug -> 409.
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/events",
+            Some(&token),
+            Some(json!({ "kind": "GENERIC", "slug": "conf-2027", "title": "Lagi", "headlineDate": "2027-03-10T09:00:00Z" })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::CONFLICT, "{b}");
+    assert_eq!(b["error"]["code"], "slug_taken");
+
+    // Bad slug -> 400.
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/events",
+            Some(&token),
+            Some(json!({ "kind": "GENERIC", "slug": "Bad Slug", "title": "x", "headlineDate": "2027-03-10T09:00:00Z" })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
+    assert_eq!(b["error"]["code"], "invalid_slug");
+
+    // WEDDING isn't supported here yet -> 400.
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/events",
+            Some(&token),
+            Some(json!({ "kind": "WEDDING", "slug": "should-fail", "title": "x", "headlineDate": "2027-03-10T09:00:00Z" })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
+    assert_eq!(b["error"]["code"], "unsupported_kind");
+}
+
 // ------------------------------------------------------------------ auth
 
 #[sqlx::test(migrations = false)]
