@@ -115,7 +115,7 @@ fn check_in(code: &str, headcount: i32, at: &str) -> Value {
 // --------------------------------------------------------------- creation
 
 #[sqlx::test(migrations = false)]
-async fn creates_a_generic_event_and_owns_it(pool: PgPool) {
+async fn creates_edits_and_archives_events(pool: PgPool) {
     let app = app(pool.clone()).await;
     let token = app.login().await;
 
@@ -167,17 +167,61 @@ async fn creates_a_generic_event_and_owns_it(pool: PgPool) {
     assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
     assert_eq!(b["error"]["code"], "invalid_slug");
 
-    // WEDDING isn't supported here yet -> 400.
+    // WEDDING is supported, but requires the couple's names.
     let (s, b) = app
         .call(
             "POST",
             "/v1/events",
             Some(&token),
-            Some(json!({ "kind": "WEDDING", "slug": "should-fail", "title": "x", "headlineDate": "2027-03-10T09:00:00Z" })),
+            Some(json!({ "kind": "WEDDING", "slug": "should-fail", "headlineDate": "2027-03-10T09:00:00Z" })),
         )
         .await;
     assert_eq!(s, StatusCode::BAD_REQUEST, "{b}");
-    assert_eq!(b["error"]["code"], "unsupported_kind");
+    assert_eq!(b["error"]["code"], "missing_names");
+
+    // A full WEDDING creation succeeds and round-trips the names.
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/events",
+            Some(&token),
+            Some(json!({
+                "kind": "WEDDING", "slug": "browser-wedding-2027",
+                "brideShortName": "Ani", "brideFullName": "Ani Suryani",
+                "groomShortName": "Budi", "groomFullName": "Budi Hartono",
+                "headlineDate": "2027-06-01T09:00:00Z", "defaultLocale": "ID", "bilingual": true,
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(b["event"]["kind"], "WEDDING");
+    assert_eq!(b["event"]["coupleLine"], "Ani & Budi");
+    let wedding_id = b["event"]["id"].as_str().unwrap().to_string();
+
+    // PUT edits top-level fields; GET reflects the change.
+    let (s, b) = app
+        .call(
+            "PUT",
+            &format!("/v1/events/{wedding_id}"),
+            Some(&token),
+            Some(json!({
+                "slug": "browser-wedding-2027", "status": "PUBLISHED",
+                "brideShortName": "Ani", "brideFullName": "Ani Suryani",
+                "groomShortName": "Budi Edited", "groomFullName": "Budi Hartono",
+                "headlineDate": "2027-06-01T09:00:00Z",
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(b["event"]["coupleLine"], "Ani & Budi Edited");
+    assert_eq!(b["event"]["status"], "PUBLISHED");
+
+    // DELETE archives it rather than removing the row.
+    let (s, b) = app.call("DELETE", &format!("/v1/events/{wedding_id}"), Some(&token), None).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    let (s, b) = app.call("GET", &format!("/v1/events/{wedding_id}"), Some(&token), None).await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+    assert_eq!(b["event"]["status"], "ARCHIVED");
 }
 
 // ------------------------------------------------------------------ auth

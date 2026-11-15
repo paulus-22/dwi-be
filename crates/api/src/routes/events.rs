@@ -60,19 +60,49 @@ pub async fn list(State(state): State<AppState>, AdminUser(admin): AdminUser) ->
     Ok(Json(json!({ "events": events })))
 }
 
-/// `POST /v1/events` — creates a GENERIC event (the admin-created "Acara"
-/// product). WEDDING events are still created in the old app for now; this
-/// endpoint deliberately rejects any other `kind` rather than half-support it.
-#[derive(Deserialize)]
+/// `POST /v1/events` — creates a WEDDING or GENERIC event. The creator
+/// becomes its OWNER; every other admin can be invited later.
+#[derive(Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-pub struct NewEvent {
-    kind: String,
-    slug: String,
-    title: String,
+pub struct EventFields {
+    kind: Option<String>,
+    slug: Option<String>,
+    status: Option<String>,
+    headline_date: Option<DateTime<Utc>>,
+    timezone: Option<String>,
+    // GENERIC
+    title: Option<String>,
     subtitle: Option<String>,
     description: Option<String>,
-    headline_date: DateTime<Utc>,
-    timezone: Option<String>,
+    // WEDDING
+    bride_short_name: Option<String>,
+    bride_full_name: Option<String>,
+    bride_parents: Option<String>,
+    bride_instagram: Option<String>,
+    groom_short_name: Option<String>,
+    groom_full_name: Option<String>,
+    groom_parents: Option<String>,
+    groom_instagram: Option<String>,
+    default_locale: Option<String>,
+    bilingual: Option<bool>,
+    theme: Option<String>,
+    hashtag: Option<String>,
+    quote_text_id: Option<String>,
+    quote_text_en: Option<String>,
+    quote_author: Option<String>,
+    story_intro_id: Option<String>,
+    story_intro_en: Option<String>,
+    closing_note_id: Option<String>,
+    closing_note_en: Option<String>,
+    dress_code_note_id: Option<String>,
+    dress_code_note_en: Option<String>,
+    dress_code_colors: Option<Vec<String>>,
+    music_url: Option<String>,
+    cover_photo_url: Option<String>,
+    cover_background_url: Option<String>,
+    closing_photo_url: Option<String>,
+    dress_code_image_url: Option<String>,
+    interlude_photos: Option<Vec<String>>,
 }
 
 /// Lowercase letters, digits and hyphens, no leading/trailing/double hyphen —
@@ -85,29 +115,40 @@ fn valid_slug(s: &str) -> bool {
         && s.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-')
 }
 
+/// Trims, and turns an empty string into `None`.
+fn nz(s: Option<String>) -> Option<String> {
+    s.and_then(|s| {
+        let t = s.trim().to_string();
+        (!t.is_empty()).then_some(t)
+    })
+}
+
+const VALID_STATUSES: &[&str] = &["DRAFT", "PUBLISHED", "ARCHIVED"];
+
 pub async fn create(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
-    Json(body): Json<NewEvent>,
+    Json(body): Json<EventFields>,
 ) -> ApiResult<Json<Value>> {
-    if body.kind != "GENERIC" {
-        return Err(ApiError::bad_request(
-            "unsupported_kind",
-            "Saat ini hanya acara non-wedding yang bisa dibuat di sini.",
-        ));
+    let kind = body.kind.as_deref().unwrap_or("");
+    if kind != "WEDDING" && kind != "GENERIC" {
+        return Err(ApiError::bad_request("invalid_kind", "Jenis acara harus WEDDING atau GENERIC."));
     }
-    let slug = body.slug.trim().to_lowercase();
+    let slug = body.slug.as_deref().unwrap_or("").trim().to_lowercase();
     if !valid_slug(&slug) {
         return Err(ApiError::bad_request(
             "invalid_slug",
             "Slug hanya boleh huruf kecil, angka, dan tanda hubung (tanpa hubung ganda/di ujung).",
         ));
     }
-    let title = body.title.trim().to_string();
-    if title.is_empty() || title.chars().count() > 160 {
-        return Err(ApiError::bad_request("invalid_title", "Judul acara wajib diisi (maks. 160 karakter)."));
+    let Some(headline_date) = body.headline_date else {
+        return Err(ApiError::bad_request("invalid_headline_date", "Tanggal & waktu acara wajib diisi."));
+    };
+    let timezone = body.timezone.clone().unwrap_or_else(|| "Asia/Jakarta".to_string());
+    let status = body.status.as_deref().unwrap_or("DRAFT");
+    if !VALID_STATUSES.contains(&status) {
+        return Err(ApiError::bad_request("invalid_status", "Status tidak dikenal."));
     }
-    let timezone = body.timezone.unwrap_or_else(|| "Asia/Jakarta".to_string());
 
     let exists: bool = sqlx::query_scalar(r#"SELECT EXISTS (SELECT 1 FROM "event" WHERE "slug" = $1)"#)
         .bind(&slug)
@@ -122,20 +163,88 @@ pub async fn create(
     }
 
     let id = Uuid::new_v4();
-    sqlx::query(
-        r#"INSERT INTO "event"
-            ("id", "slug", "status", "kind", "title", "subtitle", "description", "headlineDate", "timezone", "updatedAt")
-           VALUES ($1, $2, 'DRAFT', 'GENERIC', $3, $4, $5, $6, $7, now())"#,
-    )
-    .bind(id)
-    .bind(&slug)
-    .bind(&title)
-    .bind(body.subtitle.as_deref().map(str::trim).filter(|s| !s.is_empty()))
-    .bind(body.description.as_deref().map(str::trim).filter(|s| !s.is_empty()))
-    .bind(body.headline_date)
-    .bind(&timezone)
-    .execute(&state.db)
-    .await?;
+    if kind == "GENERIC" {
+        let Some(title) = nz(body.title.clone()) else {
+            return Err(ApiError::bad_request("invalid_title", "Judul acara wajib diisi."));
+        };
+        sqlx::query(
+            r#"INSERT INTO "event"
+                ("id", "slug", "status", "kind", "title", "subtitle", "description", "headlineDate", "timezone", "updatedAt")
+               VALUES ($1, $2, $3::"EventStatus", 'GENERIC', $4, $5, $6, $7, $8, now())"#,
+        )
+        .bind(id)
+        .bind(&slug)
+        .bind(status)
+        .bind(&title)
+        .bind(nz(body.subtitle.clone()))
+        .bind(nz(body.description.clone()))
+        .bind(headline_date)
+        .bind(&timezone)
+        .execute(&state.db)
+        .await?;
+    } else {
+        let (Some(bride_short), Some(bride_full), Some(groom_short), Some(groom_full)) = (
+            nz(body.bride_short_name.clone()),
+            nz(body.bride_full_name.clone()),
+            nz(body.groom_short_name.clone()),
+            nz(body.groom_full_name.clone()),
+        ) else {
+            return Err(ApiError::bad_request(
+                "missing_names",
+                "Nama panggilan dan nama lengkap mempelai wajib diisi.",
+            ));
+        };
+        sqlx::query(
+            r#"INSERT INTO "event"
+                ("id", "slug", "status", "kind",
+                 "brideShortName", "brideFullName", "brideParents", "brideInstagram",
+                 "groomShortName", "groomFullName", "groomParents", "groomInstagram",
+                 "headlineDate", "timezone", "defaultLocale", "bilingual", "theme", "hashtag",
+                 "quoteTextId", "quoteTextEn", "quoteAuthor",
+                 "storyIntroId", "storyIntroEn", "closingNoteId", "closingNoteEn",
+                 "dressCodeNoteId", "dressCodeNoteEn", "dressCodeColors",
+                 "musicUrl", "coverPhotoUrl", "coverBackgroundUrl", "closingPhotoUrl", "dressCodeImageUrl",
+                 "interludePhotos", "updatedAt")
+               VALUES ($1, $2, $3::"EventStatus", 'WEDDING', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
+                       $14::"Locale", $15, $16, $17,
+                       $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, now())"#,
+        )
+        .bind(id)
+        .bind(&slug)
+        .bind(status)
+        .bind(&bride_short)
+        .bind(&bride_full)
+        .bind(nz(body.bride_parents.clone()))
+        .bind(nz(body.bride_instagram.clone()))
+        .bind(&groom_short)
+        .bind(&groom_full)
+        .bind(nz(body.groom_parents.clone()))
+        .bind(nz(body.groom_instagram.clone()))
+        .bind(headline_date)
+        .bind(&timezone)
+        .bind(body.default_locale.clone().filter(|l| l == "ID" || l == "EN").unwrap_or_else(|| "ID".into()))
+        .bind(body.bilingual.unwrap_or(true))
+        .bind(body.theme.clone().filter(|t| !t.trim().is_empty()).unwrap_or_else(|| "sage-peach".into()))
+        .bind(nz(body.hashtag.clone()))
+        .bind(nz(body.quote_text_id.clone()))
+        .bind(nz(body.quote_text_en.clone()))
+        .bind(nz(body.quote_author.clone()))
+        .bind(nz(body.story_intro_id.clone()))
+        .bind(nz(body.story_intro_en.clone()))
+        .bind(nz(body.closing_note_id.clone()))
+        .bind(nz(body.closing_note_en.clone()))
+        .bind(nz(body.dress_code_note_id.clone()))
+        .bind(nz(body.dress_code_note_en.clone()))
+        .bind(body.dress_code_colors.clone().unwrap_or_default())
+        .bind(nz(body.music_url.clone()))
+        .bind(nz(body.cover_photo_url.clone()))
+        .bind(nz(body.cover_background_url.clone()))
+        .bind(nz(body.closing_photo_url.clone()))
+        .bind(nz(body.dress_code_image_url.clone()))
+        .bind(body.interlude_photos.clone().unwrap_or_default())
+        .execute(&state.db)
+        .await?;
+    }
 
     // The creator is the owner — every other admin can be invited later.
     sqlx::query(
@@ -153,6 +262,154 @@ pub async fn create(
     })))
 }
 
+/// `PUT /v1/events/{id}` — replaces the top-level fields (OWNER only, same
+/// rule as the old app: a slug/name change re-points every link already
+/// sent, so it's gated above day-to-day guest management). `kind` itself is
+/// immutable and ignored if present in the body.
+pub async fn update(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(id): Path<Uuid>,
+    Json(body): Json<EventFields>,
+) -> ApiResult<Json<Value>> {
+    admin.require_event(&state, id, Role::Owner).await?;
+    let current = load_event(&state, id).await?;
+
+    let slug = body.slug.as_deref().unwrap_or("").trim().to_lowercase();
+    if !valid_slug(&slug) {
+        return Err(ApiError::bad_request(
+            "invalid_slug",
+            "Slug hanya boleh huruf kecil, angka, dan tanda hubung (tanpa hubung ganda/di ujung).",
+        ));
+    }
+    let Some(headline_date) = body.headline_date else {
+        return Err(ApiError::bad_request("invalid_headline_date", "Tanggal & waktu acara wajib diisi."));
+    };
+    let timezone = body.timezone.clone().unwrap_or_else(|| "Asia/Jakarta".to_string());
+    let status = body.status.as_deref().unwrap_or("DRAFT");
+    if !VALID_STATUSES.contains(&status) {
+        return Err(ApiError::bad_request("invalid_status", "Status tidak dikenal."));
+    }
+
+    let clash: bool =
+        sqlx::query_scalar(r#"SELECT EXISTS (SELECT 1 FROM "event" WHERE "slug" = $1 AND "id" != $2)"#)
+            .bind(&slug)
+            .bind(id)
+            .fetch_one(&state.db)
+            .await?;
+    if clash {
+        return Err(ApiError::new(
+            axum::http::StatusCode::CONFLICT,
+            "slug_taken",
+            "Slug ini sudah dipakai acara lain.",
+        ));
+    }
+
+    if current.kind == "GENERIC" {
+        let Some(title) = nz(body.title.clone()) else {
+            return Err(ApiError::bad_request("invalid_title", "Judul acara wajib diisi."));
+        };
+        sqlx::query(
+            r#"UPDATE "event" SET "slug" = $2, "status" = $3::"EventStatus", "title" = $4, "subtitle" = $5,
+                "description" = $6, "headlineDate" = $7, "timezone" = $8, "updatedAt" = now()
+               WHERE "id" = $1"#,
+        )
+        .bind(id)
+        .bind(&slug)
+        .bind(status)
+        .bind(&title)
+        .bind(nz(body.subtitle.clone()))
+        .bind(nz(body.description.clone()))
+        .bind(headline_date)
+        .bind(&timezone)
+        .execute(&state.db)
+        .await?;
+    } else {
+        let (Some(bride_short), Some(bride_full), Some(groom_short), Some(groom_full)) = (
+            nz(body.bride_short_name.clone()),
+            nz(body.bride_full_name.clone()),
+            nz(body.groom_short_name.clone()),
+            nz(body.groom_full_name.clone()),
+        ) else {
+            return Err(ApiError::bad_request(
+                "missing_names",
+                "Nama panggilan dan nama lengkap mempelai wajib diisi.",
+            ));
+        };
+        sqlx::query(
+            r#"UPDATE "event" SET
+                "slug" = $2, "status" = $3::"EventStatus",
+                "brideShortName" = $4, "brideFullName" = $5, "brideParents" = $6, "brideInstagram" = $7,
+                "groomShortName" = $8, "groomFullName" = $9, "groomParents" = $10, "groomInstagram" = $11,
+                "headlineDate" = $12, "timezone" = $13, "defaultLocale" = $14::"Locale", "bilingual" = $15,
+                "theme" = $16, "hashtag" = $17,
+                "quoteTextId" = $18, "quoteTextEn" = $19, "quoteAuthor" = $20,
+                "storyIntroId" = $21, "storyIntroEn" = $22, "closingNoteId" = $23, "closingNoteEn" = $24,
+                "dressCodeNoteId" = $25, "dressCodeNoteEn" = $26, "dressCodeColors" = $27,
+                "musicUrl" = $28, "coverPhotoUrl" = $29, "coverBackgroundUrl" = $30,
+                "closingPhotoUrl" = $31, "dressCodeImageUrl" = $32, "interludePhotos" = $33,
+                "updatedAt" = now()
+               WHERE "id" = $1"#,
+        )
+        .bind(id)
+        .bind(&slug)
+        .bind(status)
+        .bind(&bride_short)
+        .bind(&bride_full)
+        .bind(nz(body.bride_parents.clone()))
+        .bind(nz(body.bride_instagram.clone()))
+        .bind(&groom_short)
+        .bind(&groom_full)
+        .bind(nz(body.groom_parents.clone()))
+        .bind(nz(body.groom_instagram.clone()))
+        .bind(headline_date)
+        .bind(&timezone)
+        .bind(body.default_locale.clone().filter(|l| l == "ID" || l == "EN").unwrap_or_else(|| "ID".into()))
+        .bind(body.bilingual.unwrap_or(true))
+        .bind(body.theme.clone().filter(|t| !t.trim().is_empty()).unwrap_or_else(|| "sage-peach".into()))
+        .bind(nz(body.hashtag.clone()))
+        .bind(nz(body.quote_text_id.clone()))
+        .bind(nz(body.quote_text_en.clone()))
+        .bind(nz(body.quote_author.clone()))
+        .bind(nz(body.story_intro_id.clone()))
+        .bind(nz(body.story_intro_en.clone()))
+        .bind(nz(body.closing_note_id.clone()))
+        .bind(nz(body.closing_note_en.clone()))
+        .bind(nz(body.dress_code_note_id.clone()))
+        .bind(nz(body.dress_code_note_en.clone()))
+        .bind(body.dress_code_colors.clone().unwrap_or_default())
+        .bind(nz(body.music_url.clone()))
+        .bind(nz(body.cover_photo_url.clone()))
+        .bind(nz(body.cover_background_url.clone()))
+        .bind(nz(body.closing_photo_url.clone()))
+        .bind(nz(body.dress_code_image_url.clone()))
+        .bind(body.interlude_photos.clone().unwrap_or_default())
+        .execute(&state.db)
+        .await?;
+    }
+
+    let e = load_event(&state, id).await?;
+    Ok(Json(json!({
+        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role: Role::Owner }
+    })))
+}
+
+/// `DELETE /v1/events/{id}` — soft delete: archives the event (OWNER only).
+/// The old app never hard-deletes an event either — `status = ARCHIVED` is
+/// the only "gone" state, and it's reversible by an OWNER through `update`.
+pub async fn archive(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    admin.require_event(&state, id, Role::Owner).await?;
+    sqlx::query(r#"UPDATE "event" SET "status" = 'ARCHIVED', "updatedAt" = now() WHERE "id" = $1"#)
+        .bind(id)
+        .execute(&state.db)
+        .await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
 pub async fn load_event(state: &AppState, id: Uuid) -> ApiResult<EventRow> {
     sqlx::query_as::<_, EventRow>(sqlx::AssertSqlSafe(format!(r#"{EVENT_SELECT} WHERE e."id" = $1"#)))
         .bind(id)
@@ -168,8 +425,29 @@ pub async fn get(
 ) -> ApiResult<Json<Value>> {
     let role = admin.require_event(&state, id, Role::Viewer).await?;
     let e = load_event(&state, id).await?;
+    // The summary (`EventInfo`) is enough for lists and headers; an edit form
+    // needs the full raw field set too, so it rides alongside as `detail`.
+    let detail: Value = sqlx::query_scalar(
+        r#"SELECT to_jsonb(x) FROM (
+             SELECT "slug", "description",
+                    "brideParents", "brideInstagram", "groomParents", "groomInstagram",
+                    "headlineDate" AT TIME ZONE 'UTC' AS "headlineDate", "timezone",
+                    "defaultLocale"::text AS "defaultLocale", "bilingual", "theme",
+                    "quoteTextId", "quoteTextEn", "quoteAuthor",
+                    "storyIntroId", "storyIntroEn", "closingNoteId", "closingNoteEn",
+                    "dressCodeNoteId", "dressCodeNoteEn",
+                    COALESCE("dressCodeColors", ARRAY[]::text[]) AS "dressCodeColors",
+                    "musicUrl", "coverPhotoUrl", "coverBackgroundUrl", "closingPhotoUrl", "dressCodeImageUrl",
+                    COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos"
+             FROM "event" WHERE "id" = $1
+           ) x"#,
+    )
+    .bind(id)
+    .fetch_one(&state.db)
+    .await?;
     Ok(Json(json!({
-        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role }
+        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role },
+        "detail": detail,
     })))
 }
 
