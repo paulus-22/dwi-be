@@ -2,7 +2,7 @@
 # Two stages: compile with the full toolchain, ship a ~30 MB image.
 # TLS is rustls, so the runtime image needs no OpenSSL.
 
-FROM rust:1.99-slim AS build
+FROM rust:1.99-slim-bookworm AS build
 WORKDIR /src
 # Cache dependencies: build once with stub sources, then with the real ones.
 COPY Cargo.toml Cargo.lock rustfmt.toml ./
