@@ -430,6 +430,7 @@ pub async fn get(
     let detail: Value = sqlx::query_scalar(
         r#"SELECT to_jsonb(x) FROM (
              SELECT "slug", "description",
+                    "brideFullName", "groomFullName",
                     "brideParents", "brideInstagram", "groomParents", "groomInstagram",
                     "headlineDate" AT TIME ZONE 'UTC' AS "headlineDate", "timezone",
                     "defaultLocale"::text AS "defaultLocale", "bilingual", "theme",
