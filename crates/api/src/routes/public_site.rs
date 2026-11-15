@@ -173,16 +173,17 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
     }
 
     if kind == "GENERIC" {
-        let (title, subtitle, description, headline_date, timezone, registration_mode): (
+        let (title, subtitle, description, headline_date, timezone, registration_mode, theme): (
             Option<String>,
             Option<String>,
             Option<String>,
             DateTime<Utc>,
             String,
             String,
+            String,
         ) = sqlx::query_as(
             r#"SELECT "title", "subtitle", "description", "headlineDate" AT TIME ZONE 'UTC', "timezone",
-                      "registrationMode"::text
+                      "registrationMode"::text, "theme"
                FROM "event" WHERE "id" = $1"#,
         )
         .bind(id)
@@ -193,7 +194,7 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
             "event": {
                 "id": id, "slug": slug, "kind": kind, "title": title, "subtitle": subtitle,
                 "description": description, "headlineDate": headline_date, "timezone": timezone,
-                "status": status, "registrationMode": registration_mode,
+                "status": status, "registrationMode": registration_mode, "theme": theme,
             },
             "blocks": blocks,
         })));

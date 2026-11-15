@@ -126,6 +126,10 @@ fn nz(s: Option<String>) -> Option<String> {
 }
 
 const VALID_STATUSES: &[&str] = &["DRAFT", "PUBLISHED", "ARCHIVED"];
+/// GENERIC events pick from a small fixed set, deliberately separate from
+/// the wedding product's much larger theme registry (different visual
+/// language entirely — see dwi-fe's `GENERIC_THEMES`).
+const VALID_GENERIC_THEMES: &[&str] = &["corporate-classic", "corporate-soft"];
 
 pub async fn create(
     State(state): State<AppState>,
@@ -169,10 +173,17 @@ pub async fn create(
         let Some(title) = nz(body.title.clone()) else {
             return Err(ApiError::bad_request("invalid_title", "Judul acara wajib diisi."));
         };
+        let theme = nz(body.theme.clone()).unwrap_or_else(|| "corporate-classic".to_string());
+        if !VALID_GENERIC_THEMES.contains(&theme.as_str()) {
+            return Err(ApiError::bad_request(
+                "invalid_theme",
+                format!("Tema tidak dikenal. Pilihan: {}.", VALID_GENERIC_THEMES.join(", ")),
+            ));
+        }
         sqlx::query(
             r#"INSERT INTO "event"
-                ("id", "slug", "status", "kind", "title", "subtitle", "description", "headlineDate", "timezone", "updatedAt")
-               VALUES ($1, $2, $3::"EventStatus", 'GENERIC', $4, $5, $6, $7, $8, now())"#,
+                ("id", "slug", "status", "kind", "title", "subtitle", "description", "headlineDate", "timezone", "theme", "updatedAt")
+               VALUES ($1, $2, $3::"EventStatus", 'GENERIC', $4, $5, $6, $7, $8, $9, now())"#,
         )
         .bind(id)
         .bind(&slug)
@@ -182,6 +193,7 @@ pub async fn create(
         .bind(nz(body.description.clone()))
         .bind(headline_date)
         .bind(&timezone)
+        .bind(&theme)
         .execute(&state.db)
         .await?;
     } else {
@@ -311,9 +323,16 @@ pub async fn update(
         let Some(title) = nz(body.title.clone()) else {
             return Err(ApiError::bad_request("invalid_title", "Judul acara wajib diisi."));
         };
+        let theme = nz(body.theme.clone()).unwrap_or_else(|| "corporate-classic".to_string());
+        if !VALID_GENERIC_THEMES.contains(&theme.as_str()) {
+            return Err(ApiError::bad_request(
+                "invalid_theme",
+                format!("Tema tidak dikenal. Pilihan: {}.", VALID_GENERIC_THEMES.join(", ")),
+            ));
+        }
         sqlx::query(
             r#"UPDATE "event" SET "slug" = $2, "status" = $3::"EventStatus", "title" = $4, "subtitle" = $5,
-                "description" = $6, "headlineDate" = $7, "timezone" = $8, "updatedAt" = now()
+                "description" = $6, "headlineDate" = $7, "timezone" = $8, "theme" = $9, "updatedAt" = now()
                WHERE "id" = $1"#,
         )
         .bind(id)
@@ -324,6 +343,7 @@ pub async fn update(
         .bind(nz(body.description.clone()))
         .bind(headline_date)
         .bind(&timezone)
+        .bind(&theme)
         .execute(&state.db)
         .await?;
     } else {
