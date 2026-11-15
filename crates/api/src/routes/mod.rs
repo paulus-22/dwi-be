@@ -6,7 +6,9 @@ pub mod page_blocks;
 pub mod photos;
 pub mod public;
 pub mod public_site;
+pub mod registration;
 pub mod scanner;
+pub mod ticket_types;
 
 use axum::Json;
 use axum::Router;
@@ -49,6 +51,13 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/form-fields/{id}", put(forms::update).delete(forms::delete))
         .route("/events/{id}/page-blocks", get(page_blocks::list).post(page_blocks::create))
         .route("/page-blocks/{id}", put(page_blocks::update).delete(page_blocks::delete))
+        // admin: ticket types + open/allowlist registration
+        .route("/events/{id}/ticket-types", get(ticket_types::list).post(ticket_types::create))
+        .route("/ticket-types/{id}", put(ticket_types::update).delete(ticket_types::delete))
+        .route("/ticket-types/{id}/expand", post(ticket_types::expand))
+        .route("/events/{id}/registration-mode", put(registration::set_mode))
+        .route("/events/{id}/allowlist", get(registration::list_allowlist).post(registration::add_allowlist))
+        .route("/allowlist/{id}", delete(registration::remove_allowlist_entry))
         // public guest side (no session)
         .route("/public/events/{slug}", get(public_site::event))
         .route("/public/events/{slug}/guest", get(public_site::guest))
@@ -56,6 +65,8 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/public/events/{slug}/wishes", get(public_site::wishes).post(public_site::create_wish))
         .route("/public/events/{slug}/form-fields", get(public::form_fields))
         .route("/public/events/{slug}/guests/{token}/rsvp", post(public::rsvp))
+        .route("/public/events/{slug}/ticket-types", get(registration::ticket_types))
+        .route("/public/events/{slug}/register", post(registration::register))
         // door devices
         .route("/devices/pair", post(scanner::pair))
         .route("/events/{id}/snapshot", get(scanner::snapshot))

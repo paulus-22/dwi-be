@@ -173,14 +173,16 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
     }
 
     if kind == "GENERIC" {
-        let (title, subtitle, description, headline_date, timezone): (
+        let (title, subtitle, description, headline_date, timezone, registration_mode): (
             Option<String>,
             Option<String>,
             Option<String>,
             DateTime<Utc>,
             String,
+            String,
         ) = sqlx::query_as(
-            r#"SELECT "title", "subtitle", "description", "headlineDate" AT TIME ZONE 'UTC', "timezone"
+            r#"SELECT "title", "subtitle", "description", "headlineDate" AT TIME ZONE 'UTC', "timezone",
+                      "registrationMode"::text
                FROM "event" WHERE "id" = $1"#,
         )
         .bind(id)
@@ -191,7 +193,7 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
             "event": {
                 "id": id, "slug": slug, "kind": kind, "title": title, "subtitle": subtitle,
                 "description": description, "headlineDate": headline_date, "timezone": timezone,
-                "status": status,
+                "status": status, "registrationMode": registration_mode,
             },
             "blocks": blocks,
         })));
@@ -312,7 +314,7 @@ pub async fn guest(
 /// Signed payload from the guest's **stored** code (never their current
 /// category or the event's current prefix), so printed cards keep matching.
 /// An unparseable code falls back to the bare token, like the old app.
-fn payload_for_stored_code(secret: &[u8], token: &str, admits: u32) -> String {
+pub(crate) fn payload_for_stored_code(secret: &[u8], token: &str, admits: u32) -> String {
     match parse_invite_code(token) {
         Some(p) => build_qr_payload(
             secret,

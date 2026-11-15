@@ -46,8 +46,8 @@ pub struct RsvpInput {
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResponseInput {
-    field_key: String,
-    value: Value,
+    pub(crate) field_key: String,
+    pub(crate) value: Value,
 }
 
 /// Same rules as the old app's `/api/rsvp`: the typed name goes on the RSVP
