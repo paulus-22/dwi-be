@@ -168,10 +168,13 @@ pub async fn send_rsvp_confirmation(state: &AppState, guest_id: Uuid) -> anyhow:
     let event = g.event_name();
     let date = date_label_id(g.headline_date, &g.timezone);
     let count = g.guest_count.unwrap_or(0);
+    let voucher_link = format!("{}/v/{}?to={}", state.public_site_url, g.slug, g.token);
     let text = if attending {
         format!(
             "Halo {name}, terima kasih atas konfirmasi kehadiran Anda di {event} ({date}).\n\n\
-             Kami mencatat Anda akan hadir: {count} orang.\n\nSampai jumpa!"
+             Kami mencatat Anda akan hadir: {count} orang.\n\n\
+             Berikut tautan QR masuk Anda — tunjukkan saat registrasi di lokasi:\n{voucher_link}\n\n\
+             Sampai jumpa!"
         )
     } else {
         format!(
@@ -179,7 +182,10 @@ pub async fn send_rsvp_confirmation(state: &AppState, guest_id: Uuid) -> anyhow:
              Kami mencatat Anda berhalangan hadir di {event} ({date}). Semoga kita bisa bertemu di lain kesempatan."
         )
     };
-    let payload = json!({ "text": text, "attending": attending, "guestCount": count, "event": event });
+    let payload = json!({
+        "text": text, "attending": attending, "guestCount": count, "event": event,
+        "voucherLink": attending.then(|| voucher_link.clone()),
+    });
     deliver(state, &g, guest_id, "RSVP_CONFIRMATION", &phone, "rsvp_confirmation_v1", payload, &text).await
 }
 
