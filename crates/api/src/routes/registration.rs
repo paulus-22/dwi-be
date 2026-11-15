@@ -65,7 +65,8 @@ pub async fn list_allowlist(
 ) -> ApiResult<Json<Value>> {
     admin.require_event(&state, event_id, Role::Viewer).await?;
     let entries: Vec<AllowlistEntry> = sqlx::query_as(
-        "SELECT id, phone, email, used_at FROM registration_allowlist_entry
+        "SELECT id, phone, email, used_at AT TIME ZONE 'UTC' AS used_at
+         FROM registration_allowlist_entry
          WHERE event_id = $1 ORDER BY created_at",
     )
     .bind(event_id)
@@ -258,10 +259,13 @@ pub async fn register(
             if !unlimited {
                 return Err(ApiError::new(StatusCode::CONFLICT, "sold_out", "Jenis tiket ini sudah penuh."));
             }
+            // Same global-prefix scoping as `generate_pool` (ticket_types.rs)
+            // — `codePrefix` isn't unique between events, but `token` is.
             let next_seq: i32 = sqlx::query_scalar(
-                r#"SELECT COALESCE(MAX("sequence"), 0) + 1 FROM "guest" WHERE "eventId" = $1"#,
+                r#"SELECT COALESCE(MAX(g."sequence"), 0) + 1 FROM "guest" g JOIN "event" e ON e."id" = g."eventId"
+                   WHERE e."codePrefix" = $1"#,
             )
-            .bind(event_id)
+            .bind(&prefix)
             .fetch_one(&mut *tx)
             .await?;
             let token =

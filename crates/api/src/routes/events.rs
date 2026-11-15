@@ -21,6 +21,7 @@ struct EventListItem {
     status: String,
     code_prefix: String,
     role: Role,
+    registration_mode: String,
 }
 
 pub async fn list(State(state): State<AppState>, AdminUser(admin): AdminUser) -> ApiResult<Json<Value>> {
@@ -55,6 +56,7 @@ pub async fn list(State(state): State<AppState>, AdminUser(admin): AdminUser) ->
             status: e.status.clone(),
             code_prefix: e.code_prefix.clone(),
             role: *role,
+            registration_mode: e.registration_mode.clone(),
         })
         .collect();
     Ok(Json(json!({ "events": events })))
@@ -258,7 +260,7 @@ pub async fn create(
 
     let e = load_event(&state, id).await?;
     Ok(Json(json!({
-        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role: Role::Owner }
+        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role: Role::Owner, registration_mode: e.registration_mode.clone() }
     })))
 }
 
@@ -390,7 +392,7 @@ pub async fn update(
 
     let e = load_event(&state, id).await?;
     Ok(Json(json!({
-        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role: Role::Owner }
+        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role: Role::Owner, registration_mode: e.registration_mode.clone() }
     })))
 }
 
@@ -447,7 +449,7 @@ pub async fn get(
     .fetch_one(&state.db)
     .await?;
     Ok(Json(json!({
-        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role },
+        "event": EventListItem { info: (&e).into(), status: e.status.clone(), code_prefix: e.code_prefix.clone(), role, registration_mode: e.registration_mode.clone() },
         "detail": detail,
     })))
 }

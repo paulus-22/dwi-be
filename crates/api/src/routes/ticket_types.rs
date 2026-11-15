@@ -92,10 +92,16 @@ async fn generate_pool(
     if count <= 0 {
         return Ok(());
     }
+    // Scoped by codePrefix across ALL events, not just this one: `token`
+    // (prefix-category-sequence-check) is globally unique, but `codePrefix`
+    // itself isn't enforced unique between events (every event defaults to
+    // "INV" unless the admin sets a custom one) — a per-event-only sequence
+    // would collide the moment two events share a prefix.
     let (prefix, next_seq): (String, i32) = sqlx::query_as(
-        r#"SELECT "codePrefix", COALESCE(MAX("sequence"), 0) + 1
-           FROM "event" e LEFT JOIN "guest" g ON g."eventId" = e."id"
-           WHERE e."id" = $1 GROUP BY e."codePrefix""#,
+        r#"SELECT e."codePrefix",
+                  COALESCE((SELECT MAX(g2."sequence") FROM "guest" g2 JOIN "event" e2 ON e2."id" = g2."eventId"
+                            WHERE e2."codePrefix" = e."codePrefix"), 0) + 1
+           FROM "event" e WHERE e."id" = $1"#,
     )
     .bind(event_id)
     .fetch_one(&mut **tx)

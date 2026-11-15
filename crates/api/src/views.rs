@@ -26,6 +26,7 @@ pub struct EventRow {
     pub hashtag: Option<String>,
     pub code_prefix: String,
     pub venue: Option<String>,
+    pub registration_mode: String,
 }
 
 /// Prisma columns are camelCase; alias them once here.
@@ -35,7 +36,8 @@ pub const EVENT_SELECT: &str = r#"
            e."title", e."subtitle",
            e."headlineDate" AS headline_date, e."timezone", e."hashtag", e."codePrefix" AS code_prefix,
            (SELECT c."venueName" FROM "ceremony" c WHERE c."eventId" = e."id"
-             ORDER BY c."sortOrder", c."startsAt" LIMIT 1) AS venue
+             ORDER BY c."sortOrder", c."startsAt" LIMIT 1) AS venue,
+           e."registrationMode"::text AS registration_mode
     FROM "event" e"#;
 
 /// What a scanner (or the admin dashboard) needs to show which event this is.
