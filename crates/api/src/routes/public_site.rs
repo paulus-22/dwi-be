@@ -81,6 +81,7 @@ struct WeddingEvent {
     cover_background_url: Option<String>,
     interlude_photos: Vec<String>,
     gift_address: Option<String>,
+    favicon_url: Option<String>,
 }
 
 const WEDDING_SELECT: &str = r#"
@@ -95,7 +96,7 @@ const WEDDING_SELECT: &str = r#"
            COALESCE("dressCodeColors", ARRAY[]::text[]) AS "dressCodeColors",
            "musicUrl", "coverPhotoUrl", "closingPhotoUrl", "dressCodeImageUrl", "giftImageUrl",
            "coverBackgroundUrl", COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos",
-           "giftAddress"
+           "giftAddress", "faviconUrl"
     FROM "event" WHERE "id" = $1"#;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -173,7 +174,7 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
     }
 
     if kind == "GENERIC" {
-        let (title, subtitle, description, headline_date, timezone, registration_mode, theme): (
+        let (title, subtitle, description, headline_date, timezone, registration_mode, theme, favicon_url): (
             Option<String>,
             Option<String>,
             Option<String>,
@@ -181,9 +182,10 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
             String,
             String,
             String,
+            Option<String>,
         ) = sqlx::query_as(
             r#"SELECT "title", "subtitle", "description", "headlineDate" AT TIME ZONE 'UTC', "timezone",
-                      "registrationMode"::text, "theme"
+                      "registrationMode"::text, "theme", "faviconUrl"
                FROM "event" WHERE "id" = $1"#,
         )
         .bind(id)
@@ -195,6 +197,7 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
                 "id": id, "slug": slug, "kind": kind, "title": title, "subtitle": subtitle,
                 "description": description, "headlineDate": headline_date, "timezone": timezone,
                 "status": status, "registrationMode": registration_mode, "theme": theme,
+                "faviconUrl": favicon_url,
             },
             "blocks": blocks,
         })));

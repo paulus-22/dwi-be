@@ -105,6 +105,7 @@ pub struct EventFields {
     closing_photo_url: Option<String>,
     dress_code_image_url: Option<String>,
     interlude_photos: Option<Vec<String>>,
+    favicon_url: Option<String>,
 }
 
 /// Lowercase letters, digits and hyphens, no leading/trailing/double hyphen —
@@ -182,8 +183,8 @@ pub async fn create(
         }
         sqlx::query(
             r#"INSERT INTO "event"
-                ("id", "slug", "status", "kind", "title", "subtitle", "description", "headlineDate", "timezone", "theme", "updatedAt")
-               VALUES ($1, $2, $3::"EventStatus", 'GENERIC', $4, $5, $6, $7, $8, $9, now())"#,
+                ("id", "slug", "status", "kind", "title", "subtitle", "description", "headlineDate", "timezone", "theme", "faviconUrl", "updatedAt")
+               VALUES ($1, $2, $3::"EventStatus", 'GENERIC', $4, $5, $6, $7, $8, $9, $10, now())"#,
         )
         .bind(id)
         .bind(&slug)
@@ -194,6 +195,7 @@ pub async fn create(
         .bind(headline_date)
         .bind(&timezone)
         .bind(&theme)
+        .bind(nz(body.favicon_url.clone()))
         .execute(&state.db)
         .await?;
     } else {
@@ -218,10 +220,10 @@ pub async fn create(
                  "storyIntroId", "storyIntroEn", "closingNoteId", "closingNoteEn",
                  "dressCodeNoteId", "dressCodeNoteEn", "dressCodeColors",
                  "musicUrl", "coverPhotoUrl", "coverBackgroundUrl", "closingPhotoUrl", "dressCodeImageUrl",
-                 "interludePhotos", "updatedAt")
+                 "interludePhotos", "faviconUrl", "updatedAt")
                VALUES ($1, $2, $3::"EventStatus", 'WEDDING', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
                        $14::"Locale", $15, $16, $17,
-                       $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, now())"#,
+                       $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, now())"#,
         )
         .bind(id)
         .bind(&slug)
@@ -256,6 +258,7 @@ pub async fn create(
         .bind(nz(body.closing_photo_url.clone()))
         .bind(nz(body.dress_code_image_url.clone()))
         .bind(body.interlude_photos.clone().unwrap_or_default())
+        .bind(nz(body.favicon_url.clone()))
         .execute(&state.db)
         .await?;
     }
@@ -332,7 +335,7 @@ pub async fn update(
         }
         sqlx::query(
             r#"UPDATE "event" SET "slug" = $2, "status" = $3::"EventStatus", "title" = $4, "subtitle" = $5,
-                "description" = $6, "headlineDate" = $7, "timezone" = $8, "theme" = $9, "updatedAt" = now()
+                "description" = $6, "headlineDate" = $7, "timezone" = $8, "theme" = $9, "faviconUrl" = $10, "updatedAt" = now()
                WHERE "id" = $1"#,
         )
         .bind(id)
@@ -344,6 +347,7 @@ pub async fn update(
         .bind(headline_date)
         .bind(&timezone)
         .bind(&theme)
+        .bind(nz(body.favicon_url.clone()))
         .execute(&state.db)
         .await?;
     } else {
@@ -370,6 +374,7 @@ pub async fn update(
                 "dressCodeNoteId" = $25, "dressCodeNoteEn" = $26, "dressCodeColors" = $27,
                 "musicUrl" = $28, "coverPhotoUrl" = $29, "coverBackgroundUrl" = $30,
                 "closingPhotoUrl" = $31, "dressCodeImageUrl" = $32, "interludePhotos" = $33,
+                "faviconUrl" = $34,
                 "updatedAt" = now()
                WHERE "id" = $1"#,
         )
@@ -406,6 +411,7 @@ pub async fn update(
         .bind(nz(body.closing_photo_url.clone()))
         .bind(nz(body.dress_code_image_url.clone()))
         .bind(body.interlude_photos.clone().unwrap_or_default())
+        .bind(nz(body.favicon_url.clone()))
         .execute(&state.db)
         .await?;
     }
@@ -461,7 +467,8 @@ pub async fn get(
                     "dressCodeNoteId", "dressCodeNoteEn",
                     COALESCE("dressCodeColors", ARRAY[]::text[]) AS "dressCodeColors",
                     "musicUrl", "coverPhotoUrl", "coverBackgroundUrl", "closingPhotoUrl", "dressCodeImageUrl",
-                    COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos"
+                    COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos",
+                    "faviconUrl"
              FROM "event" WHERE "id" = $1
            ) x"#,
     )
