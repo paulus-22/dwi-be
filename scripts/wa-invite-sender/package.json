@@ -1,0 +1,15 @@
+{
+  "name": "wa-invite-sender",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Send wedding invitation links over WhatsApp Web, logged in as the couple's own number.",
+  "type": "commonjs",
+  "main": "send.js",
+  "scripts": {
+    "send": "node send.js"
+  },
+  "dependencies": {
+    "whatsapp-web.js": "^1.26.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
