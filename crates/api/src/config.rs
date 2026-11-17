@@ -30,15 +30,10 @@ pub struct Config {
     #[arg(long, env = "SESSION_HOURS", default_value_t = 12)]
     pub session_hours: i64,
 
-    /// Base URL of the public invitation site; WhatsApp invite links are
+    /// Base URL of the public invitation site; invite links are
     /// `{PUBLIC_SITE_URL}/e/{slug}?to={token}`.
     #[arg(long, env = "PUBLIC_SITE_URL", default_value = "http://localhost:3000")]
     pub public_site_url: String,
-
-    /// Optional. Fonnte device token for WhatsApp messages. Without it nothing
-    /// is sent and each attempt is logged as FAILED.
-    #[arg(long, env = "FONNTE_TOKEN", hide_env_values = true)]
-    pub fonnte_token: Option<String>,
 
     #[command(flatten)]
     pub storage: StorageConfig,

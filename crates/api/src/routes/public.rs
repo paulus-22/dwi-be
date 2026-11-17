@@ -16,7 +16,6 @@ use uuid::Uuid;
 use crate::error::{ApiError, ApiResult};
 use crate::routes::forms::load_fields;
 use crate::state::AppState;
-use crate::whatsapp;
 
 pub(crate) async fn published_event(state: &AppState, slug: &str) -> ApiResult<Uuid> {
     sqlx::query_scalar(r#"SELECT "id" FROM "event" WHERE "slug" = $1 AND "status" = 'PUBLISHED'"#)
@@ -136,9 +135,6 @@ pub async fn rsvp(
         saved.push(json!({ "fieldKey": field_key, "value": r.value }));
     }
     tx.commit().await?;
-
-    // Best effort: a WhatsApp hiccup must never fail the RSVP itself.
-    whatsapp::spawn_rsvp_confirmation(state.clone(), guest_id);
 
     Ok(Json(json!({
         "rsvp": {

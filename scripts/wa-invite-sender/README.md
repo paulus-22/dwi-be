@@ -2,11 +2,11 @@
 
 Sends each guest their personal invitation link over WhatsApp, logged in as
 the groom's or bride's own number (via WhatsApp Web, no business API, no
-token to pay for). This is **not** the `whatsapp.rs` Fonnte integration in
-`crates/api` (that's the *automatic RSVP confirmation* message sent by the
-backend when a guest RSVPs — separate thing, separate account/number). This
-script is for the manual, one-time (or occasional) *initial invitation*
-blast, run by hand from your own machine.
+token to pay for). This is a standalone local script, separate from the
+backend — the backend no longer sends any WhatsApp messages (the old Fonnte
+provider integration was removed). When a guest RSVPs or registers, the QR
+link is shown in the web UI itself; this script handles the *initial
+invitation* blast, run by hand from your own machine.
 
 ## How it works
 

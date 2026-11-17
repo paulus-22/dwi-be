@@ -11,7 +11,6 @@ pub mod seed;
 pub mod state;
 pub mod storage;
 pub mod views;
-pub mod whatsapp;
 
 pub use config::Config;
 pub use state::AppState;

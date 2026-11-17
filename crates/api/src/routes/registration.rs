@@ -18,7 +18,6 @@ use crate::error::{ApiError, ApiResult};
 use crate::routes::public::published_event;
 use crate::routes::public_site::payload_for_stored_code;
 use crate::state::AppState;
-use crate::whatsapp;
 
 // --------------------------------------------------------- admin: mode
 
@@ -329,9 +328,6 @@ pub async fn register(
         .fetch_one(&mut *tx)
         .await?;
     tx.commit().await?;
-
-    // Best effort: a WhatsApp hiccup must never fail the registration itself.
-    whatsapp::spawn_rsvp_confirmation(state.clone(), guest_id);
 
     let qr_payload = payload_for_stored_code(&state.invite_secret, &token, 1);
     Ok(Json(json!({ "token": token, "qrPayload": qr_payload })))

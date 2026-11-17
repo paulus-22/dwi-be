@@ -25,7 +25,6 @@ fn config(storage: bool) -> Config {
         cors_origins: "http://localhost:3000".into(),
         session_hours: 12,
         public_site_url: "http://localhost:3000".into(),
-        fonnte_token: None, // WhatsApp degrades to FAILED log rows; never hits the network
         storage: StorageConfig {
             s3_endpoint: storage.then(|| "https://acct.r2.cloudflarestorage.com".into()),
             s3_bucket: storage.then(|| "dwi-photos".into()),
@@ -908,8 +907,7 @@ async fn public_rsvp_saves_dynamic_responses(pool: PgPool) {
         StatusCode::NOT_FOUND
     );
 
-    // "Sinta Maharani": no RSVP yet, no plus-ones. Give her a phone so the
-    // WhatsApp confirmation path runs (and fails quietly: no FONNTE_TOKEN).
+    // "Sinta Maharani": no RSVP yet, no plus-ones.
     let code = &app.demo.codes[3];
     let guest_id: Uuid = sqlx::query_scalar(
         r#"UPDATE "guest" SET "phone" = '081234567890' WHERE "token" = $1 RETURNING "id""#,
@@ -973,26 +971,6 @@ async fn public_rsvp_saves_dynamic_responses(pool: PgPool) {
         .await
         .unwrap();
     assert!(!attending);
-
-    // The WhatsApp confirmations ran in the background, were logged, and
-    // failed gracefully without a token — the RSVPs above still succeeded.
-    let mut failed = 0;
-    for _ in 0..50 {
-        failed = sqlx::query_scalar::<_, i64>(
-            "SELECT count(*) FROM whatsapp_message
-             WHERE guest_id = $1 AND kind = 'RSVP_CONFIRMATION' AND status = 'FAILED'
-               AND error LIKE '%FONNTE_TOKEN%'",
-        )
-        .bind(guest_id)
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-        if failed == 2 {
-            break;
-        }
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-    }
-    assert_eq!(failed, 2);
 
     // Unknown token, and a draft event is invisible.
     let (s, b) = app
