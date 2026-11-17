@@ -1,5 +1,29 @@
 # WhatsApp invitation sender
 
+## Flow tools
+
+Two scripts here, used in sequence for "I have the list → guests in the DB → send":
+
+1. **`import-and-send.js`** — feed it any CSV (`name,phone,category`, headerless) and it
+   inserts guests into the DB (generating app-valid invite codes
+   `{prefix}-{CAT}-{seq:04}-{check}` with the exact checksum the backend uses),
+   writes `guests.csv`, then hands off to `send.js`.
+   ```bash
+   node import-and-send.js --csv list.csv --slug tari-saefulloh --dry-run  # import + preview
+   node import-and-send.js --csv list.csv --slug tari-saefulloh --limit 10 # import + send first 10
+   ```
+   Idempotent: re-running never duplicates a guest (matched on event+phone).
+   Needs `npm install pg`.
+
+2. **`send.js`** — the WhatsApp Web sender (see below). You usually reach it via
+   `import-and-send.js`, or pass a `guests.csv` directly:
+   ```bash
+   node send.js --csv guests.csv --dry-run
+   node send.js --csv guests.csv --limit 50
+   ```
+
+## Manual export → send (no new guests; bring an existing list up to date)
+
 Sends each guest their personal invitation link over WhatsApp, logged in as
 the groom's or bride's own number (via WhatsApp Web, no business API, no
 token to pay for). This is a standalone local script, separate from the
