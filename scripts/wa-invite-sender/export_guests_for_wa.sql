@@ -2,7 +2,7 @@
 -- sending: name, phone, category, personal invite link.
 --
 -- Usage:
---   psql "$DATABASE_URL" -v slug="'tari-saefulloh'" -v site_url="'https://preview-tm.luspau.my.id'" \
+--   psql "$DATABASE_URL" -v slug="'tari-saefulloh'" -v site_url="'https://themoments.id'" \
 --     -f export_guests_for_wa.sql -A -F',' -t -o guests.csv
 --
 -- `-A -F',' -t` makes psql emit plain unaligned CSV-ish rows with no header/

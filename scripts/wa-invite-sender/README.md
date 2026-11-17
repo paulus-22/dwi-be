@@ -36,7 +36,7 @@ npm install     # pulls in whatsapp-web.js + puppeteer (downloads a Chromium)
 cd ../..   # back to dwi-be root
 psql "$DATABASE_URL" \
   -v slug="'tari-saefulloh'" \
-  -v site_url="'https://preview-tm.luspau.my.id'" \
+  -v site_url="'https://themoments.id'" \
   -A -F',' -t \
   -f scripts/wa-invite-sender/export_guests_for_wa.sql \
   -o scripts/wa-invite-sender/guests.csv
