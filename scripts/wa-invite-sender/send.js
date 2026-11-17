@@ -122,12 +122,29 @@ function loadGuests(csvPath) {
   });
 }
 
-/** Normalizes an Indonesian-style number to WhatsApp's `@c.us` JID. */
+/**
+ * Normalizes an Indonesian-style number to WhatsApp's `@c.us` JID.
+ *  - "+62 …" / "+60 …" / "+65 …": explicit international format is kept as-is
+ *    (leading zero in local format is dropped per country-code rules)
+ *  - "0812…" (starts with 0): Indonesian local → 62812…
+ *  - bare digits without country code: assumed Indonesian → 62812…
+ */
 function toWhatsAppId(rawPhone) {
   let digits = rawPhone.replace(/[^\d+]/g, "");
-  if (digits.startsWith("+")) digits = digits.slice(1);
-  if (digits.startsWith("0")) digits = "62" + digits.slice(1);
-  if (!digits.startsWith("62") && digits.length <= 11) digits = "62" + digits;
+  if (digits.startsWith("+")) {
+    // explicit international format: keep the full country code + national
+    // number, but strip a leading "0" that some people write after "+62"
+    digits = digits.slice(1);
+    if (digits.startsWith("62") && digits.length > 10) digits = digits.replace(/^620/, "620");
+    if (digits.startsWith("0")) digits = digits.slice(1);
+    return `${digits}@c.us`;
+  }
+  if (digits.startsWith("0")) {
+    digits = "62" + digits.slice(1); // Indonesian local format
+  } else if (!digits.startsWith("62") && (digits.length < 10 || digits.startsWith("8"))) {
+    // short or Indonesian (8…) number without country code
+    digits = "62" + digits;
+  }
   return `${digits}@c.us`;
 }
 
