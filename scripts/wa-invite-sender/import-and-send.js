@@ -115,6 +115,19 @@ function loadRows(csvPath) {
   return rows;
 }
 
+// Resolve a *node* binary path, never the current interpreter. When run via
+// `bun`, process.execPath points at Bun — the WhatsApp session must run under
+// node (whatsapp-web.js + puppeteer headless is unreliable under Bun). Falls
+// back to plain "node" from PATH if execPath looks like Bun.
+function forceNodePath() {
+  const exe = process.execPath || "";
+  const base = exe.split(/[\\/]/).pop() || "";
+  if (!/^(bun|bunx)$/i.test(base)) {
+    return exe; // already node (or node-like)
+  }
+  return "node"; // else let the shell resolve the system node
+}
+
 function findDbUrl() {
   if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
   // fall back to the repo's .env (same one export_guests_for_wa.sql reads)
@@ -221,12 +234,16 @@ DB from $DATABASE_URL or dwi-be/.env. Requires npm package 'pg'.`);
     return;
   }
 
-  // hand off to the existing sender
+  // hand off to the existing sender.
+  // IMPORTANT: spawn the WhatsApp session under node, never the current
+  // interpreter (e.g. Bun). whatsapp-web.js / puppeteer's headless injection
+  // is unreliable under Bun and times out (30s) launching WhatsApp Web.
+  const nodeBin = forceNodePath();
   const sendArgs = ["send.js", "--csv", args.out];
   if (args.dryRun) sendArgs.push("--dry-run");
   if (args.limit) sendArgs.push("--limit", String(args.limit));
   const { spawnSync } = require("child_process");
-  const r = spawnSync(process.execPath, sendArgs, { cwd: __dirname, stdio: "inherit" });
+  const r = spawnSync(nodeBin, sendArgs, { cwd: __dirname, stdio: "inherit" });
   process.exit(r.status === null ? 1 : r.status);
 }
 

@@ -213,7 +213,11 @@ async function main() {
 
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: path.join(__dirname, ".wwebjs_auth") }),
-    puppeteer: { headless: true },
+    // launchTimeout + protocolTimeout: first launch often takes >30s to load
+    // the (heavy) WhatsApp Web page; without these the session crashes with
+    // "Waiting failed: 30000ms exceeded" at inject().
+    puppeteer: { headless: true, protocolTimeout: 180000, timeout: 120000 },
+    takeoverOnConflict: true,
   });
 
   client.on("qr", (qr) => {
