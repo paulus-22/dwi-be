@@ -59,16 +59,27 @@ Options:
                           this script — see DEFAULT_TEMPLATE below.
 `;
 
-const DEFAULT_TEMPLATE = `Halo {{name}},
+const DEFAULT_TEMPLATE = `Yth.
+Bapak/Ibu/Saudara/i
+{{name}}
+di Tempat
 
-Dengan penuh syukur dan sukacita, kami mengundang Anda untuk hadir di acara pernikahan kami.
+Bismillahirrahmanirrahim,
+Assalamu’alaikum Warahmatullahi Wabarakatuh.
 
-Silakan buka undangan digital kami di tautan berikut untuk info lengkap dan konfirmasi kehadiran:
+Tanpa mengurangi rasa hormat, perkenankan kami mengundang Bapak/Ibu/Saudara/i untuk hadir dan memberikan doa restu pada hari bahagia pernikahan kami.
+
+Informasi lengkap mengenai detail acara serta konfirmasi kehadiran dapat diakses melalui tautan undangan digital berikut:
+
 {{link}}
 
-Merupakan kebahagiaan bagi kami apabila Anda dapat hadir dan memberikan restu.
+Sampai bertemu di hari bahagia kami. 🤍
 
-Terima kasih 🙏`;
+Terima kasih
+Wassalamu’alaikum Warahmatullahi Wabarakatuh
+
+Kami yang berbahagia,
+Tari & Iful`;
 
 /** Minimal CSV line parser: handles quoted fields with embedded commas. */
 function parseCsvLine(line) {
