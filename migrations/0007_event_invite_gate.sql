@@ -6,5 +6,7 @@
 --                be gated (no key to derive), so the invite stays open for
 --                them (same as OPEN) — gating only applies when a phone
 --                exists.
--- Additive; existing events fall back to 'OPEN'.
-ALTER TABLE "event" ADD COLUMN "inviteGate" TEXT NOT NULL DEFAULT 'OPEN';
+-- Additive; existing events fall back to 'OPEN'. Idempotent (IF NOT EXISTS)
+-- so it can re-run against a DB that already has the column (dev applied it
+-- manually or a prior deploy added it).
+ALTER TABLE "event" ADD COLUMN IF NOT EXISTS "inviteGate" TEXT NOT NULL DEFAULT 'OPEN';
