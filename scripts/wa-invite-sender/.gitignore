@@ -3,3 +3,6 @@ node_modules/
 .wwebjs_cache/
 sent-log.csv
 guests.csv
+bun.lock
+# guest-data CSVs from real send runs (never commit personally-identifying guest lists)
+*.csv

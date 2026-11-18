@@ -82,6 +82,7 @@ struct WeddingEvent {
     interlude_photos: Vec<String>,
     gift_address: Option<String>,
     favicon_url: Option<String>,
+    invite_gate: String,
 }
 
 const WEDDING_SELECT: &str = r#"
@@ -96,7 +97,7 @@ const WEDDING_SELECT: &str = r#"
            COALESCE("dressCodeColors", ARRAY[]::text[]) AS "dressCodeColors",
            "musicUrl", "coverPhotoUrl", "closingPhotoUrl", "dressCodeImageUrl", "giftImageUrl",
            "coverBackgroundUrl", COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos",
-           "giftAddress", "faviconUrl"
+           "giftAddress", "faviconUrl", "inviteGate"::text AS "inviteGate"
     FROM "event" WHERE "id" = $1"#;
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
@@ -174,7 +175,7 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
     }
 
     if kind == "GENERIC" {
-        let (title, subtitle, description, headline_date, timezone, registration_mode, theme, favicon_url): (
+        let (title, subtitle, description, headline_date, timezone, registration_mode, theme, favicon_url, invite_gate): (
             Option<String>,
             Option<String>,
             Option<String>,
@@ -183,9 +184,10 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
             String,
             String,
             Option<String>,
+            String,
         ) = sqlx::query_as(
             r#"SELECT "title", "subtitle", "description", "headlineDate" AT TIME ZONE 'UTC', "timezone",
-                      "registrationMode"::text, "theme", "faviconUrl"
+                      "registrationMode"::text, "theme", "faviconUrl", "inviteGate"::text
                FROM "event" WHERE "id" = $1"#,
         )
         .bind(id)
@@ -197,7 +199,7 @@ pub async fn event(State(state): State<AppState>, Path(slug): Path<String>) -> A
                 "id": id, "slug": slug, "kind": kind, "title": title, "subtitle": subtitle,
                 "description": description, "headlineDate": headline_date, "timezone": timezone,
                 "status": status, "registrationMode": registration_mode, "theme": theme,
-                "faviconUrl": favicon_url,
+                "faviconUrl": favicon_url, "inviteGate": invite_gate,
             },
             "blocks": blocks,
         })));
@@ -258,6 +260,7 @@ struct GuestRow {
     token: String,
     household_name: String,
     plus_guest_allowance: i32,
+    phone: Option<String>,
     rsvp_attending: Option<bool>,
     rsvp_guest_count: Option<i32>,
     rsvp_respondent_name: Option<String>,
@@ -275,7 +278,7 @@ async fn find_guest(state: &AppState, event_id: Uuid, token: Option<&str>) -> Ap
     let Some(token) = token.map(normalize_token).filter(|t| !t.is_empty()) else { return Ok(None) };
     Ok(sqlx::query_as::<_, GuestRow>(
         r#"SELECT g."id", g."token", g."householdName" AS household_name,
-                  g."plusGuestAllowance" AS plus_guest_allowance,
+                  g."plusGuestAllowance" AS plus_guest_allowance, g.phone,
                   r."attending" AS rsvp_attending, r."guestCount" AS rsvp_guest_count,
                   r."respondentName" AS rsvp_respondent_name, r."message" AS rsvp_message
            FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
@@ -311,6 +314,63 @@ pub async fn guest(
             "plusGuestAllowance": g.plus_guest_allowance, "rsvp": rsvp,
         }
     })))
+}
+
+/// `POST /v1/public/events/{slug}/gate` — unlock a PHONE_6 invite with the
+/// guest's secret code (last 6 digits of their phone). Body: { token, code }.
+/// Nonexistent guest / wrong code → 403; correct code → 200.
+#[derive(Deserialize)]
+pub struct GateCheckInput {
+    token: String,
+    code: String,
+}
+
+pub async fn check_gate(
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+    Json(body): Json<GateCheckInput>,
+) -> ApiResult<Json<Value>> {
+    let event_id = published_event(&state, &slug).await?;
+    let token = normalize_token(&body.token);
+    let guest = sqlx::query_as::<_, GuestRow>(
+        r#"SELECT g."id", g."token", g."householdName" AS household_name,
+                  g."plusGuestAllowance" AS plus_guest_allowance,
+                  g.phone, r."attending" AS rsvp_attending, r."guestCount" AS rsvp_guest_count,
+                  r."respondentName" AS rsvp_respondent_name, r."message" AS rsvp_message
+           FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
+           WHERE g."token" = $1 AND g."eventId" = $2"#,
+    )
+    .bind(&token)
+    .bind(event_id)
+    .fetch_optional(&state.db)
+    .await?;
+
+    // A guest with no phone has no derivable code → can't be locked out.
+    let gate: String =
+        sqlx::query_scalar(r#"SELECT "inviteGate" FROM "event" WHERE "id" = $1"#)
+            .bind(event_id)
+            .fetch_one(&state.db)
+            .await?;
+
+    let Some(g) = guest else {
+        return Err(ApiError::new(StatusCode::FORBIDDEN, "gate_denied", "Kode tidak valid."));
+    };
+
+    let ok = gate != "PHONE_6"
+        || g.phone
+            .as_deref()
+            .map(|p| {
+                let digits: String = p.chars().filter(|c| c.is_ascii_digit()).collect();
+                // Last 6 digits of the phone.
+                !digits.is_empty() && digits.len() >= 6 && digits[digits.len() - 6..] == body.code
+            })
+            .unwrap_or(true);
+
+    if ok {
+        Ok(Json(json!({ "ok": true, "guestId": g.id })))
+    } else {
+        Err(ApiError::new(StatusCode::FORBIDDEN, "gate_denied", "Kode tidak valid."))
+    }
 }
 
 // ---------------------------------------------------------------- voucher

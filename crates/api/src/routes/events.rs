@@ -106,6 +106,8 @@ pub struct EventFields {
     dress_code_image_url: Option<String>,
     interlude_photos: Option<Vec<String>>,
     favicon_url: Option<String>,
+    /// 'OPEN' (no password) or 'PHONE_6' (guest's last-6-phone-digits).
+    invite_gate: Option<String>,
 }
 
 /// Lowercase letters, digits and hyphens, no leading/trailing/double hyphen —
@@ -127,6 +129,14 @@ fn nz(s: Option<String>) -> Option<String> {
 }
 
 const VALID_STATUSES: &[&str] = &["DRAFT", "PUBLISHED", "ARCHIVED"];
+const VALID_INVITE_GATES: &[&str] = &["OPEN", "PHONE_6"];
+/// Defaults an absent or invalid gate to OPEN; maps unknown values safely.
+fn normalize_invite_gate(raw: Option<&str>) -> &'static str {
+    match raw.map(str::trim).unwrap_or("") {
+        "PHONE_6" => "PHONE_6",
+        _ => "OPEN",
+    }
+}
 /// GENERIC events pick from a small fixed set, deliberately separate from
 /// the wedding product's much larger theme registry (different visual
 /// language entirely — see dwi-fe's `GENERIC_THEMES`).
@@ -335,7 +345,8 @@ pub async fn update(
         }
         sqlx::query(
             r#"UPDATE "event" SET "slug" = $2, "status" = $3::"EventStatus", "title" = $4, "subtitle" = $5,
-                "description" = $6, "headlineDate" = $7, "timezone" = $8, "theme" = $9, "faviconUrl" = $10, "updatedAt" = now()
+                "description" = $6, "headlineDate" = $7, "timezone" = $8, "theme" = $9, "faviconUrl" = $10,
+                "inviteGate" = $11, "updatedAt" = now()
                WHERE "id" = $1"#,
         )
         .bind(id)
@@ -348,6 +359,7 @@ pub async fn update(
         .bind(&timezone)
         .bind(&theme)
         .bind(nz(body.favicon_url.clone()))
+        .bind(normalize_invite_gate(body.invite_gate.as_deref()))
         .execute(&state.db)
         .await?;
     } else {
@@ -374,7 +386,7 @@ pub async fn update(
                 "dressCodeNoteId" = $25, "dressCodeNoteEn" = $26, "dressCodeColors" = $27,
                 "musicUrl" = $28, "coverPhotoUrl" = $29, "coverBackgroundUrl" = $30,
                 "closingPhotoUrl" = $31, "dressCodeImageUrl" = $32, "interludePhotos" = $33,
-                "faviconUrl" = $34,
+                "faviconUrl" = $34, "inviteGate" = $35,
                 "updatedAt" = now()
                WHERE "id" = $1"#,
         )
@@ -412,6 +424,7 @@ pub async fn update(
         .bind(nz(body.dress_code_image_url.clone()))
         .bind(body.interlude_photos.clone().unwrap_or_default())
         .bind(nz(body.favicon_url.clone()))
+        .bind(normalize_invite_gate(body.invite_gate.as_deref()))
         .execute(&state.db)
         .await?;
     }
@@ -468,7 +481,7 @@ pub async fn get(
                     COALESCE("dressCodeColors", ARRAY[]::text[]) AS "dressCodeColors",
                     "musicUrl", "coverPhotoUrl", "coverBackgroundUrl", "closingPhotoUrl", "dressCodeImageUrl",
                     COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos",
-                    "faviconUrl"
+                    "faviconUrl", "inviteGate"::text AS "inviteGate"
              FROM "event" WHERE "id" = $1
            ) x"#,
     )

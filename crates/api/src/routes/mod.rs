@@ -61,6 +61,7 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         // public guest side (no session)
         .route("/public/events/{slug}", get(public_site::event))
         .route("/public/events/{slug}/guest", get(public_site::guest))
+        .route("/public/events/{slug}/gate", post(public_site::check_gate))
         .route("/public/events/{slug}/voucher", get(public_site::voucher))
         .route("/public/events/{slug}/wishes", get(public_site::wishes).post(public_site::create_wish))
         .route("/public/events/{slug}/form-fields", get(public::form_fields))
