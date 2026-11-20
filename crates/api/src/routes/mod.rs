@@ -38,6 +38,7 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/events", get(events::list).post(events::create))
         .route("/events/{id}", get(events::get).put(events::update).delete(events::archive))
         .route("/events/{id}/guests", get(events::guests).post(events::create_guest))
+        .route("/events/{id}/guests/{guestId}", put(events::set_guest_qr))
         .route("/events/{id}/attendance", get(events::attendance))
         .route(
             "/events/{id}/pairing-codes",

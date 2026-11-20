@@ -261,6 +261,7 @@ struct GuestRow {
     household_name: String,
     plus_guest_allowance: i32,
     phone: Option<String>,
+    qr_direct: bool,
     rsvp_attending: Option<bool>,
     rsvp_guest_count: Option<i32>,
     rsvp_respondent_name: Option<String>,
@@ -278,7 +279,7 @@ async fn find_guest(state: &AppState, event_id: Uuid, token: Option<&str>) -> Ap
     let Some(token) = token.map(normalize_token).filter(|t| !t.is_empty()) else { return Ok(None) };
     Ok(sqlx::query_as::<_, GuestRow>(
         r#"SELECT g."id", g."token", g."householdName" AS household_name,
-                  g."plusGuestAllowance" AS plus_guest_allowance, g.phone,
+                  g."plusGuestAllowance" AS plus_guest_allowance, g.phone, g."qrDirect" AS qr_direct,
                   r."attending" AS rsvp_attending, r."guestCount" AS rsvp_guest_count,
                   r."respondentName" AS rsvp_respondent_name, r."message" AS rsvp_message
            FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
@@ -335,7 +336,7 @@ pub async fn check_gate(
     let guest = sqlx::query_as::<_, GuestRow>(
         r#"SELECT g."id", g."token", g."householdName" AS household_name,
                   g."plusGuestAllowance" AS plus_guest_allowance,
-                  g.phone, r."attending" AS rsvp_attending, r."guestCount" AS rsvp_guest_count,
+                  g.phone, g."qrDirect" AS qr_direct, r."attending" AS rsvp_attending, r."guestCount" AS rsvp_guest_count,
                   r."respondentName" AS rsvp_respondent_name, r."message" AS rsvp_message
            FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
            WHERE g."token" = $1 AND g."eventId" = $2"#,
@@ -411,6 +412,14 @@ pub async fn voucher(
         "id": g.id, "householdName": g.household_name, "token": g.token,
         "plusGuestAllowance": g.plus_guest_allowance, "displayName": display_name,
     });
+
+    if g.qr_direct {
+        // A direct-QR guest never needs to confirm: their pass admits the
+        // invitation's own allowance (there's no submitted guest count).
+        let admits = (g.plus_guest_allowance + 1).max(1);
+        let qr_payload = payload_for_stored_code(&state.invite_secret, &g.token, admits as u32);
+        return Ok(Json(json!({ "status": "issued", "guest": guest, "admits": admits, "qrPayload": qr_payload })));
+    }
 
     if g.rsvp_attending != Some(true) {
         return Ok(Json(json!({ "status": "pending", "guest": guest, "declined": g.has_rsvp() })));

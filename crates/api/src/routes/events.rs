@@ -505,14 +505,46 @@ pub struct GuestRow {
     pub plus_allowance: i32,
     pub attending: Option<bool>,
     pub rsvp_count: Option<i32>,
+    pub qr_direct: bool,
 }
 
 pub const GUEST_SELECT: &str = r#"
     SELECT g."id", g."token" AS code, g."householdName" AS household_name, g."category",
-           g."plusGuestAllowance" AS plus_allowance, r."attending", r."guestCount" AS rsvp_count
+           g."plusGuestAllowance" AS plus_allowance, r."attending", r."guestCount" AS rsvp_count,
+           g."qrDirect" AS qr_direct
     FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
     WHERE g."eventId" = $1
     ORDER BY g."sequence", g."householdName""#;
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GuestQrInput {
+    qr_direct: bool,
+}
+
+/// `PUT /v1/events/{id}/guests/{guestId}` — set a single guest's direct-QR
+/// flag (issue their pass without requiring a confirmation).
+pub async fn set_guest_qr(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path((event_id, guest_id)): Path<(Uuid, Uuid)>,
+    Json(body): Json<GuestQrInput>,
+) -> ApiResult<Json<Value>> {
+    admin.require_event(&state, event_id, Role::Organizer).await?;
+    let upd = sqlx::query(
+        r#"UPDATE "guest" SET "qrDirect" = $1, "updatedAt" = now()
+           WHERE "id" = $2 AND "eventId" = $3"#,
+    )
+    .bind(body.qr_direct)
+    .bind(guest_id)
+    .bind(event_id)
+    .execute(&state.db)
+    .await?;
+    if upd.rows_affected() == 0 {
+        return Err(ApiError::not_found("Tamu tidak ditemukan."));
+    }
+    Ok(Json(json!({ "ok": true, "qrDirect": body.qr_direct })))
+}
 
 pub async fn guests(
     State(state): State<AppState>,
@@ -533,6 +565,7 @@ pub async fn guests(
                 "category": guest_category(&g.code, g.category.as_deref()).as_str(),
                 "attending": g.attending,
                 "admits": guest_admits(g.attending, g.rsvp_count, g.plus_allowance),
+                "qrDirect": g.qr_direct,
                 "checkedInAt": check_in.map(|c| c.occurred_at),
                 "checkedInHeadcount": check_in.map(|c| c.headcount),
             })
