@@ -95,6 +95,8 @@ function parseArgs(argv) {
     else if (a === "--dry-run") args.dryRun = true;
     else if (a === "--no-send") args.noSend = true;
     else if (a === "--limit") args.limit = Number(next());
+    else if (a === "--delay-min") args.delayMin = Number(next());
+    else if (a === "--delay-max") args.delayMax = Number(next());
     else if (a === "--help" || a === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${a}`);
   }
@@ -154,6 +156,9 @@ Options:
   --dry-run          Import + print, but don't open WhatsApp and send nothing.
   --no-send          Import only; write guests.csv but don't hand to send.js.
   --limit N          Send to only the first N imported guests.
+  --delay-min <sec>  Min delay between sends (default 15 / 35).
+  --delay-max <sec>  Max delay between sends. Saved-contact lists can go
+                     tighter, e.g. --delay-min 2 --delay-max 5.
   --out <file>       Where to write the send-formatted CSV (default guests.csv).
 
 CSV (headerless): name,phone,category[,link]   — link column is optional.
@@ -242,6 +247,8 @@ DB from $DATABASE_URL or dwi-be/.env. Requires npm package 'pg'.`);
   const sendArgs = ["send.js", "--csv", args.out];
   if (args.dryRun) sendArgs.push("--dry-run");
   if (args.limit) sendArgs.push("--limit", String(args.limit));
+  if (args.delayMin) sendArgs.push("--delay-min", String(args.delayMin));
+  if (args.delayMax) sendArgs.push("--delay-max", String(args.delayMax));
   const { spawnSync } = require("child_process");
   const r = spawnSync(nodeBin, sendArgs, { cwd: __dirname, stdio: "inherit" });
   process.exit(r.status === null ? 1 : r.status);
