@@ -505,13 +505,14 @@ pub struct GuestRow {
     pub plus_allowance: i32,
     pub attending: Option<bool>,
     pub rsvp_count: Option<i32>,
-    pub qr_direct: bool,
+    pub pass_mode: String,
+    pub passcode: Option<String>,
 }
 
 pub const GUEST_SELECT: &str = r#"
     SELECT g."id", g."token" AS code, g."householdName" AS household_name, g."category",
            g."plusGuestAllowance" AS plus_allowance, r."attending", r."guestCount" AS rsvp_count,
-           g."qrDirect" AS qr_direct
+           g."passMode"::text AS pass_mode, g."passcode"
     FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
     WHERE g."eventId" = $1
     ORDER BY g."sequence", g."householdName""#;
@@ -519,11 +520,12 @@ pub const GUEST_SELECT: &str = r#"
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct GuestQrInput {
-    qr_direct: bool,
+    pass_mode: Option<String>,
+    passcode: Option<Option<String>>,
 }
 
-/// `PUT /v1/events/{id}/guests/{guestId}` — set a single guest's direct-QR
-/// flag (issue their pass without requiring a confirmation).
+/// `PUT /v1/events/{id}/guests/{guestId}` — set a single guest's pass mode
+/// (NORMAL / DIRECT / GROUP) and optional custom passcode.
 pub async fn set_guest_qr(
     State(state): State<AppState>,
     AdminUser(admin): AdminUser,
@@ -531,19 +533,38 @@ pub async fn set_guest_qr(
     Json(body): Json<GuestQrInput>,
 ) -> ApiResult<Json<Value>> {
     admin.require_event(&state, event_id, Role::Organizer).await?;
-    let upd = sqlx::query(
-        r#"UPDATE "guest" SET "qrDirect" = $1, "updatedAt" = now()
-           WHERE "id" = $2 AND "eventId" = $3"#,
-    )
-    .bind(body.qr_direct)
-    .bind(guest_id)
-    .bind(event_id)
-    .execute(&state.db)
-    .await?;
+    let mode = body.pass_mode.as_deref().unwrap_or("NORMAL").trim();
+    if !matches!(mode, "NORMAL" | "DIRECT" | "GROUP") {
+        return Err(ApiError::bad_request("invalid_pass_mode", "Mode tidak dikenal."));
+    }
+    let mode = mode.to_string();
+    // passcode: Some(Some(val)) sets it, Some(None) clears, None leaves it.
+    let upd = if let Some(passcode) = &body.passcode {
+        sqlx::query(
+            r#"UPDATE "guest" SET "passMode" = $1, "passcode" = $2, "updatedAt" = now()
+               WHERE "id" = $3 AND "eventId" = $4"#,
+        )
+        .bind(&mode)
+        .bind(passcode.as_deref())
+        .bind(guest_id)
+        .bind(event_id)
+        .execute(&state.db)
+        .await?
+    } else {
+        sqlx::query(
+            r#"UPDATE "guest" SET "passMode" = $1, "updatedAt" = now()
+               WHERE "id" = $2 AND "eventId" = $3"#,
+        )
+        .bind(&mode)
+        .bind(guest_id)
+        .bind(event_id)
+        .execute(&state.db)
+        .await?
+    };
     if upd.rows_affected() == 0 {
         return Err(ApiError::not_found("Tamu tidak ditemukan."));
     }
-    Ok(Json(json!({ "ok": true, "qrDirect": body.qr_direct })))
+    Ok(Json(json!({ "ok": true, "passMode": mode })))
 }
 
 pub async fn guests(
@@ -565,7 +586,8 @@ pub async fn guests(
                 "category": guest_category(&g.code, g.category.as_deref()).as_str(),
                 "attending": g.attending,
                 "admits": guest_admits(g.attending, g.rsvp_count, g.plus_allowance),
-                "qrDirect": g.qr_direct,
+                "passMode": g.pass_mode,
+                "passcode": g.passcode,
                 "checkedInAt": check_in.map(|c| c.occurred_at),
                 "checkedInHeadcount": check_in.map(|c| c.headcount),
             })
