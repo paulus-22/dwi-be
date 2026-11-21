@@ -419,16 +419,12 @@ pub async fn voucher(
         "plusGuestAllowance": g.plus_guest_allowance, "displayName": display_name,
     });
 
-    if g.open_group() {
-        // GROUP guest — no individual pass to scan. The FE shows a
-        // confirmation-only state (no QR ticket), and the door treats this
-        // token as open-group admission.
-        return Ok(Json(json!({ "status": "group", "guest": guest })));
-    }
-
-    if g.direct_pass() {
-        // A direct-QR guest never needs to confirm: their pass admits the
-        // invitation's own allowance (there's no submitted guest count).
+    // A GROUP guest admits as an open group via ONE shareable QR: any member
+    // can scan it (the scanner then records which member arrived + headcount).
+    // It is always issuable, like a DIRECT pass — no per-person RSVP needed.
+    // A DIRECT guest never needs to confirm either: their pass admits the
+    // invitation's own allowance (there's no submitted guest count).
+    if g.open_group() || g.direct_pass() {
         let admits = (g.plus_guest_allowance + 1).max(1);
         let qr_payload = payload_for_stored_code(&state.invite_secret, &g.token, admits as u32);
         return Ok(Json(json!({ "status": "issued", "guest": guest, "admits": admits, "qrPayload": qr_payload })));
