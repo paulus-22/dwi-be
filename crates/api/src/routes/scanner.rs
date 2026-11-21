@@ -90,6 +90,12 @@ struct SnapshotGuest {
     admits: i32,
     table: Option<String>,
     vip: bool,
+    /// Group (kelompok) invitation — no per-person pass; usher records a member name.
+    #[serde(default)]
+    group: bool,
+    /// This group's full headcount cap (so the door knows it's N people).
+    #[serde(default)]
+    group_cap: i32,
 }
 
 #[derive(Serialize, sqlx::FromRow)]
@@ -135,6 +141,8 @@ async fn snapshot_guests(state: &AppState, event_id: Uuid) -> ApiResult<Vec<Snap
                 household_name: g.household_name,
                 attending: g.attending,
                 table: None,
+                group: g.pass_mode == "GROUP",
+                group_cap: g.plus_allowance + 1,
             }
         })
         .collect();
@@ -186,6 +194,9 @@ struct CheckInIn {
     occurred_at: DateTime<Utc>,
     #[serde(default, rename = "override")]
     is_override: bool,
+    /// For GROUP invitations — which member arrived (usher-typed).
+    #[serde(default, rename = "memberName")]
+    member_name: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -217,6 +228,9 @@ pub struct LiveScan {
     pub device_name: String,
     #[serde(rename = "override")]
     pub is_override: bool,
+    /// GROUP check-in: which member arrived (usher-typed name).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub member_name: Option<String>,
 }
 
 pub async fn sync(
@@ -261,6 +275,7 @@ pub async fn sync(
         .fetch_optional(&mut *tx)
         .await?;
         let occurred = fix(c.occurred_at);
+        let name = c.member_name.as_deref().map(str::trim).filter(|s| !s.is_empty()).map(|s| s.to_string());
         let inserted: Option<i64> = sqlx::query_scalar(
             "INSERT INTO scanner_event (id, event_id, device_id, kind, guest_code, guest_id, headcount, override, occurred_at)
              VALUES ($1, $2, $3, 'CHECK_IN', $4, $5, $6, $7, $8)
@@ -279,17 +294,18 @@ pub async fn sync(
 
         if let Some(seq) = inserted {
             // Mirror into the old app's table so its admin keeps showing
-            // check-ins during the transition.
+            // check-ins during the transition. Group member name rides along.
             if let Some((guest_id, _)) = &guest {
                 sqlx::query(
-                    r#"INSERT INTO "check_in" ("id", "guestId", "scannedAt", "scannedBy", "guestCount")
-                       VALUES ($1, $2, $3, $4, $5) ON CONFLICT ("id") DO NOTHING"#,
+                    r#"INSERT INTO "check_in" ("id", "guestId", "scannedAt", "scannedBy", "guestCount", "memberName")
+                       VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT ("id") DO NOTHING"#,
                 )
                 .bind(c.id)
                 .bind(guest_id)
                 .bind(occurred.naive_utc())
                 .bind(&device.name)
                 .bind(c.headcount)
+                .bind(&name)
                 .execute(&mut *tx)
                 .await?;
             }
@@ -304,6 +320,7 @@ pub async fn sync(
                 occurred_at: occurred,
                 device_name: device.name.clone(),
                 is_override: c.is_override,
+                member_name: name.clone(),
             });
         }
         acked.push(c.id);
@@ -355,6 +372,7 @@ pub async fn sync(
                 occurred_at: occurred,
                 device_name: device.name.clone(),
                 is_override: false,
+                member_name: None,
             });
         }
         acked.push(r.id);
