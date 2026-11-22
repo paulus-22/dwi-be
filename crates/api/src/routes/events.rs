@@ -507,12 +507,13 @@ pub struct GuestRow {
     pub rsvp_count: Option<i32>,
     pub pass_mode: String,
     pub passcode: Option<String>,
+    pub password_required: bool,
 }
 
 pub const GUEST_SELECT: &str = r#"
     SELECT g."id", g."token" AS code, g."householdName" AS household_name, g."category",
            g."plusGuestAllowance" AS plus_allowance, r."attending", r."guestCount" AS rsvp_count,
-           g."passMode"::text AS pass_mode, g."passcode"
+           g."passMode"::text AS pass_mode, g."passcode", g."passwordRequired" AS password_required
     FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
     WHERE g."eventId" = $1
     ORDER BY g."sequence", g."householdName""#;
@@ -522,6 +523,7 @@ pub const GUEST_SELECT: &str = r#"
 pub struct GuestQrInput {
     pass_mode: Option<String>,
     passcode: Option<Option<String>>,
+    password_required: Option<bool>,
 }
 
 /// `PUT /v1/events/{id}/guests/{guestId}` — set a single guest's pass mode
@@ -539,23 +541,28 @@ pub async fn set_guest_qr(
     }
     let mode = mode.to_string();
     // passcode: Some(Some(val)) sets it, Some(None) clears, None leaves it.
+    // passwordRequired keeps its current value when omitted (COALESCE).
     let upd = if let Some(passcode) = &body.passcode {
         sqlx::query(
-            r#"UPDATE "guest" SET "passMode" = $1, "passcode" = $2, "updatedAt" = now()
-               WHERE "id" = $3 AND "eventId" = $4"#,
+            r#"UPDATE "guest" SET "passMode" = $1, "passcode" = $2,
+               "passwordRequired" = COALESCE($3, "passwordRequired"), "updatedAt" = now()
+               WHERE "id" = $4 AND "eventId" = $5"#,
         )
         .bind(&mode)
         .bind(passcode.as_deref())
+        .bind(body.password_required)
         .bind(guest_id)
         .bind(event_id)
         .execute(&state.db)
         .await?
     } else {
         sqlx::query(
-            r#"UPDATE "guest" SET "passMode" = $1, "updatedAt" = now()
-               WHERE "id" = $2 AND "eventId" = $3"#,
+            r#"UPDATE "guest" SET "passMode" = $1,
+               "passwordRequired" = COALESCE($2, "passwordRequired"), "updatedAt" = now()
+               WHERE "id" = $3 AND "eventId" = $4"#,
         )
         .bind(&mode)
+        .bind(body.password_required)
         .bind(guest_id)
         .bind(event_id)
         .execute(&state.db)
@@ -588,6 +595,7 @@ pub async fn guests(
                 "admits": guest_admits(g.attending, g.rsvp_count, g.plus_allowance),
                 "passMode": g.pass_mode,
                 "passcode": g.passcode,
+                "passwordRequired": g.password_required,
                 "checkedInAt": check_in.map(|c| c.occurred_at),
                 "checkedInHeadcount": check_in.map(|c| c.headcount),
             })

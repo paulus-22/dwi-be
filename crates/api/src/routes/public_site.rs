@@ -263,6 +263,7 @@ struct GuestRow {
     phone: Option<String>,
     pass_mode: String, // 'NORMAL' | 'DIRECT' | 'GROUP'
     passcode: Option<String>,
+    password_required: bool,
     rsvp_attending: Option<bool>,
     rsvp_guest_count: Option<i32>,
     rsvp_respondent_name: Option<String>,
@@ -284,8 +285,13 @@ impl GuestRow {
 
 /// Qualified guess for the invite-gate code. An explicit guest passcode wins;
 /// otherwise derives from the phone (last 6 digits). `None` = no gate (can't
-/// lock a guest with neither a phone nor a passcode out).
+/// lock a guest out). This happens when a guest is explicitly exempted from
+/// the password (`PasswordRequired = false`), is a GROUP invite (no per-person
+/// pass), or has neither a phone nor a passcode.
 fn gate_code(g: &GuestRow) -> Option<String> {
+    if !g.password_required || g.open_group() {
+        return None;
+    }
     if let Some(c) = g.passcode.as_deref().map(str::trim).filter(|c| !c.is_empty()) {
         return Some(c.to_string());
     }
@@ -304,6 +310,7 @@ async fn find_guest(state: &AppState, event_id: Uuid, token: Option<&str>) -> Ap
         r#"SELECT g."id", g."token", g."householdName" AS household_name,
                   g."plusGuestAllowance" AS plus_guest_allowance, g.phone,
                   g."passMode"::text AS pass_mode, g."passcode",
+                  g."passwordRequired" AS password_required,
                   r."attending" AS rsvp_attending, r."guestCount" AS rsvp_guest_count,
                   r."respondentName" AS rsvp_respondent_name, r."message" AS rsvp_message
            FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
@@ -336,7 +343,8 @@ pub async fn guest(
     Ok(Json(json!({
         "guest": {
             "id": g.id, "token": g.token, "householdName": g.household_name,
-            "plusGuestAllowance": g.plus_guest_allowance, "passMode": g.pass_mode, "rsvp": rsvp,
+            "plusGuestAllowance": g.plus_guest_allowance, "passMode": g.pass_mode,
+            "passwordRequired": g.password_required, "rsvp": rsvp,
         }
     })))
 }
@@ -368,10 +376,11 @@ pub async fn check_gate(
         .await?;
 
     let expected = gate_code(&g);
+    // A guest whose gate code is None (explicitly password-free, a GROUP
+    // invite, or no phone/passcode at all) can't be locked out: auto-pass.
     let ok = gate != "PHONE_6"
-        || expected
-            .as_deref()
-            .is_some_and(|expected| expected == body.code.trim());
+        || expected.is_none()
+        || expected.as_deref().is_some_and(|expected| expected == body.code.trim());
 
     if ok {
         Ok(Json(json!({ "ok": true, "guestId": g.id })))
