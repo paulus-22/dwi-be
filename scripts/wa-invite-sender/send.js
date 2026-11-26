@@ -240,7 +240,17 @@ async function main() {
     // "Waiting failed: 30000ms exceeded" at inject().
     // If raising authTimeoutMs still isn't enough (WA blocks headless), run
     // with a real window: WA_HEADLESS=0 node send.js …
-    puppeteer: { headless: process.env.WA_HEADLESS !== "0", protocolTimeout: 180000, timeout: 120000 },
+    puppeteer: {
+      headless: process.env.WA_HEADLESS !== "0",
+      protocolTimeout: 180000,
+      timeout: 120000,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-dev-shm-usage",
+        "--user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+      ],
+    },
     takeoverOnConflict: true,
   });
 
