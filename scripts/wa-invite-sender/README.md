@@ -22,6 +22,20 @@ Two scripts here, used in sequence for "I have the list → guests in the DB →
    node send.js --csv guests.csv --limit 50
    ```
 
+3. **`remind-non-rsvp.js`** — new script: WhatsApp **reminder** to every guest who
+   has **not RSVP'd yet** on a given event. Pulls them straight from the DB,
+   writes a `reminders-<slug>-<date>.csv`, and hands off to `send.js` with its
+   **own** sent-log (`reminder-log.csv`) so reminders never collide with the
+   original invites and re-runs skip already-reminded numbers.
+   ```bash
+   node remind-non-rsvp.js --slug tari-saefulloh --dry-run          # preview who'd be reminded
+   node remind-non-rsvp.js --slug tari-saefulloh --limit 10         # send to first 10
+   node remind-non-rsvp.js --slug tari-saefulloh --days-before 7    # only if event is within 7 days
+   ```
+   The default message lives in `reminder-template.txt` (placeholders
+   `{{name}}`, `{{link}}`, `{{category}}`) — edit it, or pass `--template`.
+   Needs `npm install pg`.
+
 ## Manual export → send (no new guests; bring an existing list up to date)
 
 Sends each guest their personal invitation link over WhatsApp, logged in as
@@ -112,5 +126,8 @@ plan to run it in the background, or in batches across a day or two with
 
 - `export_guests_for_wa.sql` — the DB query, parameterized by event slug.
 - `send.js` — the sender. `--help` for all options.
-- `guests.csv`, `sent-log.csv`, `.wwebjs_auth/` — all gitignored; these are
-  real guest data / a live login session, never commit them.
+- `import-and-send.js` — CSV → DB import + hand-off to `send.js`.
+- `remind-non-rsvp.js` — reminder to non-RSVP'd guests + hand-off to `send.js`.
+- `reminder-template.txt` — default reminder message.
+- `guests.csv`, `sent-log.csv`, `reminder-log.csv`, `.wwebjs_auth/` — all
+  gitignored; these are real guest data / a live login session, never commit them.

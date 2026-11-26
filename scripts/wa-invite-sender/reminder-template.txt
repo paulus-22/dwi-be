@@ -1,0 +1,12 @@
+Halo, {{name}},
+
+Ini pengingat ramah untuk undangan pernikahan yang sudah kami kirim sebelumnya. 🙏
+
+Kalau Anda berkenan hadir, mohon konfirmasi kehadirannya lewat tautan undangan berikut (cukup tekan, pilih Hadir/Tidak Hadir):
+
+{{link}}
+
+Batas konfirmasi bukan maksud untuk menekan — kami hanya butuh perkiraan jumlah tamu untuk persiapan. Kami akan sangat senang bertemu Anda di hari bahagia kami. 🤍
+
+Salam hangat,
+Tari & Saefulloh
