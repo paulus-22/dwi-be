@@ -230,10 +230,17 @@ async function main() {
 
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: path.join(__dirname, ".wwebjs_auth") }),
+    // authTimeoutMs is the gate `inject()` waits on (window.Debug.VERSION).
+    // Default is 30s; first launch / a freshly-scanned QR routinely takes
+    // longer, so raise it or the session dies with "Waiting failed:
+    // 30000ms exceeded". protocolTimeout below is a *different* knob.
+    authTimeoutMs: 180000,
     // launchTimeout + protocolTimeout: first launch often takes >30s to load
     // the (heavy) WhatsApp Web page; without these the session crashes with
     // "Waiting failed: 30000ms exceeded" at inject().
-    puppeteer: { headless: true, protocolTimeout: 180000, timeout: 120000 },
+    // If raising authTimeoutMs still isn't enough (WA blocks headless), run
+    // with a real window: WA_HEADLESS=0 node send.js …
+    puppeteer: { headless: process.env.WA_HEADLESS !== "0", protocolTimeout: 180000, timeout: 120000 },
     takeoverOnConflict: true,
   });
 
