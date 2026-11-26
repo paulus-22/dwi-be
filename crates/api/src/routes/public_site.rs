@@ -80,6 +80,7 @@ struct WeddingEvent {
     gift_image_url: Option<String>,
     cover_background_url: Option<String>,
     interlude_photos: Vec<String>,
+    gallery_photos: Vec<String>,
     gift_address: Option<String>,
     favicon_url: Option<String>,
     invite_gate: String,
@@ -97,6 +98,7 @@ const WEDDING_SELECT: &str = r#"
            COALESCE("dressCodeColors", ARRAY[]::text[]) AS "dressCodeColors",
            "musicUrl", "coverPhotoUrl", "closingPhotoUrl", "dressCodeImageUrl", "giftImageUrl",
            "coverBackgroundUrl", COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos",
+          COALESCE("galleryPhotos", ARRAY[]::text[]) AS "galleryPhotos",
            "giftAddress", "faviconUrl", "inviteGate"::text AS "inviteGate"
     FROM "event" WHERE "id" = $1"#;
 

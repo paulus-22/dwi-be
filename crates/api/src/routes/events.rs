@@ -105,6 +105,7 @@ pub struct EventFields {
     closing_photo_url: Option<String>,
     dress_code_image_url: Option<String>,
     interlude_photos: Option<Vec<String>>,
+    gallery_photos: Option<Vec<String>>,
     favicon_url: Option<String>,
     /// 'OPEN' (no password) or 'PHONE_6' (guest's last-6-phone-digits).
     invite_gate: Option<String>,
@@ -230,10 +231,10 @@ pub async fn create(
                  "storyIntroId", "storyIntroEn", "closingNoteId", "closingNoteEn",
                  "dressCodeNoteId", "dressCodeNoteEn", "dressCodeColors",
                  "musicUrl", "coverPhotoUrl", "coverBackgroundUrl", "closingPhotoUrl", "dressCodeImageUrl",
-                 "interludePhotos", "faviconUrl", "updatedAt")
+                 "interludePhotos", "galleryPhotos", "faviconUrl", "updatedAt")
                VALUES ($1, $2, $3::"EventStatus", 'WEDDING', $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
                        $14::"Locale", $15, $16, $17,
-                       $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, now())"#,
+                       $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, now())"#,
         )
         .bind(id)
         .bind(&slug)
@@ -268,6 +269,7 @@ pub async fn create(
         .bind(nz(body.closing_photo_url.clone()))
         .bind(nz(body.dress_code_image_url.clone()))
         .bind(body.interlude_photos.clone().unwrap_or_default())
+        .bind(body.gallery_photos.clone().unwrap_or_default())
         .bind(nz(body.favicon_url.clone()))
         .execute(&state.db)
         .await?;
@@ -386,7 +388,7 @@ pub async fn update(
                 "dressCodeNoteId" = $25, "dressCodeNoteEn" = $26, "dressCodeColors" = $27,
                 "musicUrl" = $28, "coverPhotoUrl" = $29, "coverBackgroundUrl" = $30,
                 "closingPhotoUrl" = $31, "dressCodeImageUrl" = $32, "interludePhotos" = $33,
-                "faviconUrl" = $34, "inviteGate" = $35,
+                "galleryPhotos" = $34, "faviconUrl" = $35, "inviteGate" = $36,
                 "updatedAt" = now()
                WHERE "id" = $1"#,
         )
@@ -423,6 +425,7 @@ pub async fn update(
         .bind(nz(body.closing_photo_url.clone()))
         .bind(nz(body.dress_code_image_url.clone()))
         .bind(body.interlude_photos.clone().unwrap_or_default())
+        .bind(body.gallery_photos.clone().unwrap_or_default())
         .bind(nz(body.favicon_url.clone()))
         .bind(normalize_invite_gate(body.invite_gate.as_deref()))
         .execute(&state.db)
@@ -481,6 +484,7 @@ pub async fn get(
                     COALESCE("dressCodeColors", ARRAY[]::text[]) AS "dressCodeColors",
                     "musicUrl", "coverPhotoUrl", "coverBackgroundUrl", "closingPhotoUrl", "dressCodeImageUrl",
                     COALESCE("interludePhotos", ARRAY[]::text[]) AS "interludePhotos",
+                    COALESCE("galleryPhotos", ARRAY[]::text[]) AS "galleryPhotos",
                     "faviconUrl", "inviteGate"::text AS "inviteGate"
              FROM "event" WHERE "id" = $1
            ) x"#,
