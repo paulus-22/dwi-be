@@ -33,6 +33,8 @@ function parseArgs(argv) {
     else if (a === "--dry-run") args.dryRun = true;
     else if (a === "--delay-min") args.delayMin = Number(next());
     else if (a === "--delay-max") args.delayMax = Number(next());
+    else if (a === "--batch-size") args.batchSize = Number(next());
+    else if (a === "--pause-between") args.pauseBetween = Number(next());
     else if (a === "--log") args.log = next();
     else if (a === "--limit") args.limit = Number(next());
     else if (a === "--template") args.templatePath = next();
@@ -53,6 +55,10 @@ Options:
   --dry-run             Print what would be sent; never opens WhatsApp Web.
   --delay-min <sec>      Minimum delay between sends (default 15).
   --delay-max <sec>      Maximum delay between sends (default 35).
+  --batch-size <n>       Pause after every n successful sends (default: no batching).
+  --pause-between <sec>  How long to pause between batches (e.g. 90). Use with
+                         --batch-size so a large blast looks human and dodges
+                         WhatsApp's spam throttle.
   --log <path>          Sent-log CSV for resume/skip (default sent-log.csv).
   --limit <n>            Only send to the first N not-yet-sent guests.
   --session <name>       Which WhatsApp account to send from. Each name keeps
@@ -304,8 +310,14 @@ async function main() {
     }
     const isLast = g === pending[pending.length - 1];
     if (!isLast) {
-      const delay = args.delayMin + Math.random() * (args.delayMax - args.delayMin);
-      await sleep(delay * 1000);
+      if (args.batchSize && okCount > 0 && okCount % args.batchSize === 0 && args.pauseBetween) {
+        console.log(`\nBatch done (${okCount} sent). Pausing ${args.pauseBetween}s before the next batch…`);
+        await sleep(args.pauseBetween * 1000);
+        process.stdout.write("\n");
+      } else {
+        const delay = args.delayMin + Math.random() * (args.delayMax - args.delayMin);
+        await sleep(delay * 1000);
+      }
     }
   }
 

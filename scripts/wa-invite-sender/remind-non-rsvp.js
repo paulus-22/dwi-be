@@ -57,6 +57,8 @@ function parseArgs(argv) {
     else if (a === "--limit") args.limit = Number(next());
     else if (a === "--delay-min") args.delayMin = Number(next());
     else if (a === "--delay-max") args.delayMax = Number(next());
+    else if (a === "--batch-size") args.batchSize = Number(next());
+    else if (a === "--pause-between") args.pauseBetween = Number(next());
     else if (a === "--help" || a === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${a}`);
   }
@@ -191,6 +193,8 @@ some from Iful's):
   if (args.limit) sendArgs.push("--limit", String(args.limit));
   if (args.delayMin) sendArgs.push("--delay-min", String(args.delayMin));
   if (args.delayMax) sendArgs.push("--delay-max", String(args.delayMax));
+  if (args.batchSize) sendArgs.push("--batch-size", String(args.batchSize));
+  if (args.pauseBetween) sendArgs.push("--pause-between", String(args.pauseBetween));
   const r = spawnSync(forceNodePath(), sendArgs, { cwd: __dirname, stdio: "inherit" });
   process.exit(r.status === null ? 1 : r.status);
 }
