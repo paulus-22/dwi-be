@@ -36,6 +36,7 @@ function parseArgs(argv) {
     else if (a === "--log") args.log = next();
     else if (a === "--limit") args.limit = Number(next());
     else if (a === "--template") args.templatePath = next();
+    else if (a === "--session") args.session = next();
     else if (a === "--help" || a === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${a}`);
   }
@@ -54,6 +55,10 @@ Options:
   --delay-max <sec>      Maximum delay between sends (default 35).
   --log <path>          Sent-log CSV for resume/skip (default sent-log.csv).
   --limit <n>            Only send to the first N not-yet-sent guests.
+  --session <name>       Which WhatsApp account to send from. Each name keeps
+                         its own auth dir (.wwebjs_auth-<name>), so you can
+                         send from two numbers (e.g. --session tari and
+                         --session iful). Default: .wwebjs_auth.
   --template <path>      Message template file. Placeholders: {{name}},
                           {{link}}, {{category}}. Default is built into
                           this script — see DEFAULT_TEMPLATE below.
@@ -228,8 +233,13 @@ async function main() {
   const { Client, LocalAuth } = require("whatsapp-web.js");
   const qrcode = require("qrcode-terminal");
 
+  const authDir = path.join(
+    __dirname,
+    args.session ? `.wwebjs_auth-${args.session.replace(/[^a-z0-9_-]/gi, "")}` : ".wwebjs_auth",
+  );
+
   const client = new Client({
-    authStrategy: new LocalAuth({ dataPath: path.join(__dirname, ".wwebjs_auth") }),
+    authStrategy: new LocalAuth({ dataPath: authDir }),
     // authTimeoutMs is the gate `inject()` waits on (window.Debug.VERSION).
     // Default is 30s; first launch / a freshly-scanned QR routinely takes
     // longer, so raise it or the session dies with "Waiting failed:

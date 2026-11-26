@@ -1,8 +1,10 @@
 node_modules/
 .wwebjs_auth/
+.wwebjs_auth-*/
 .wwebjs_cache/
 sent-log.csv
 guests.csv
+reminder-log.csv
 bun.lock
 # guest-data CSVs from real send runs (never commit personally-identifying guest lists)
 *.csv

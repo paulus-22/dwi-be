@@ -16,9 +16,12 @@
  *   --slug <slug>     Required. The event whose non-RSVP guests to remind.
  *   --days-before <n> Only remind guests whose event is within n days from now
  *                     (i.e. the event happens in <= n days). Omit = all, no filter.
- *   --dry-run         Print what would be sent; never opens WhatsApp.
- *   --no-send         Write the reminder CSV but don't hand to the sender.
- *   --limit N         Hand only the first N not-yet-reminded guests.
+ *   Pulls the list to a CSV by default; nothing is sent. To actually send:
+ *   --send            Hand the CSV to send.js for a real WhatsApp send.
+ *   --session <name>  Which account to send from (own auth per name), e.g. tari|iful.
+ *   --dry-run         Write the CSV + show the messages (no WhatsApp session).
+ *   --no-send         (legacy alias) pull only, never hand off.
+ *   --limit N         Limit how many are handed to the sender (with --send/--dry-run).
  *   --template <path> Message file; placeholders {{name}}, {{link}}, {{category}}.
  *                     Defaults to reminder-template.txt if it exists.
  *   --log <path>      Sent-log for reminders (default reminder-log.csv).
@@ -49,6 +52,8 @@ function parseArgs(argv) {
     else if (a === "--days-before") args.daysBefore = Number(next());
     else if (a === "--dry-run") args.dryRun = true;
     else if (a === "--no-send") args.noSend = true;
+    else if (a === "--send") args.send = true;
+    else if (a === "--session") args.session = next();
     else if (a === "--limit") args.limit = Number(next());
     else if (a === "--delay-min") args.delayMin = Number(next());
     else if (a === "--delay-max") args.delayMax = Number(next());
@@ -89,9 +94,12 @@ async function main() {
 Options:
   --slug <slug>      Required. Event whose non-RSVP guests to remind.
   --days-before <n>  Only guests whose event is within n days (default: no filter).
-  --dry-run          Print candidates without opening WhatsApp.
-  --no-send          Write the CSV only, don't hand to send.js.
-  --limit N          Remind only the first N not-yet-reminded guests.
+                     Pulls to CSV only. To send, add:
+  --send             Hand the CSV to send.js for a real WhatsApp send.
+  --session <name>   Which number to send from (own auth per name): tari/iful.
+  --dry-run          Write the CSV + preview (opens no WhatsApp session).
+  --no-send          Pull only (legacy alias of the default).
+  --limit N          Limit how many are sent (with --send/--dry-run).
   --template <path>  Message file ({{name}}, {{link}}, {{category}}).
   --log <path>       Reminder sent-log (default reminder-log.csv).
   --out <path>       Reminder CSV for the sender.
@@ -156,16 +164,26 @@ DB from $DATABASE_URL or dwi-be/.env. Requires npm package 'pg'.`);
   fs.writeFileSync(args.out, lines.join("\n") + "\n");
   console.log(`Wrote ${lines.length} reminder rows to ${args.out}`);
 
-  if (args.noSend || lines.length === 0) {
-    console.log(args.noSend ? "Skipping WhatsApp (--no-send)." : "Nothing to send.");
+  // Pull-only by default: this script just gathers the non-RSVP'd list. You
+  // then split the CSV by which WhatsApp number sends to each guest and send
+  // each part from its own session (see below). No WhatsApp session is opened
+  // unless --send (or --dry-run) is passed.
+  if (!args.send && !args.dryRun) {
+    console.log(`
+Done — nothing was sent. Next steps (some guests are sent from Tari's number,
+some from Iful's):
+  1. Open ${args.out} and split the rows into two files, e.g. remind-tari.csv
+     and remind-iful.csv (by who knows each guest / which side they're from).
+  2. Send each part from its own WhatsApp account (scans QR once per account):
+     node send.js --csv remind-tari.csv --session tari --log reminder-tari.csv
+     node send.js --csv remind-iful.csv --session iful --log reminder-iful.csv`);
     return;
   }
+  if (lines.length === 0) return;
 
-  // Hand off to the existing sender under node (whatsapp-web.js is unreliable
-  // under Bun), with ITS OWN sent-log so reminders don't collide with the
-  // original invites.
   const { spawnSync } = require("child_process");
   const sendArgs = ["send.js", "--csv", args.out, "--log", args.log];
+  if (args.session) sendArgs.push("--session", args.session);
   if (args.template && !["", "none"].includes(args.template) && fs.existsSync(args.template)) {
     sendArgs.push("--template", args.template);
   }

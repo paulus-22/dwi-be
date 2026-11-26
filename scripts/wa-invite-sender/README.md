@@ -22,19 +22,25 @@ Two scripts here, used in sequence for "I have the list → guests in the DB →
    node send.js --csv guests.csv --limit 50
    ```
 
-3. **`remind-non-rsvp.js`** — new script: WhatsApp **reminder** to every guest who
-   has **not RSVP'd yet** on a given event. Pulls them straight from the DB,
-   writes a `reminders-<slug>-<date>.csv`, and hands off to `send.js` with its
-   **own** sent-log (`reminder-log.csv`) so reminders never collide with the
-   original invites and re-runs skip already-reminded numbers.
+3. **`remind-non-rsvp.js`** — pulls every guest who has **not RSVP'd yet** on an
+   event into a `reminders-<slug>-<date>.csv`. **Pull-only by default** — it
+   never opens WhatsApp. Because guests are sent from two numbers (Tari's and
+   Iful's), you then split the CSV by who knows each guest and send each part
+   from its own account:
    ```bash
-   node remind-non-rsvp.js --slug tari-saefulloh --dry-run          # preview who'd be reminded
-   node remind-non-rsvp.js --slug tari-saefulloh --limit 10         # send to first 10
-   node remind-non-rsvp.js --slug tari-saefulloh --days-before 7    # only if event is within 7 days
+   # 1. Pull the list (writes the CSV, sends nothing)
+   node remind-non-rsvp.js --slug tari-saefulloh
+   # 2. Open reminders-tari-saefulloh-<date>.csv and split into
+   #    remind-tari.csv and remind-iful.csv (by side/family)
+   # 3. Send each part from its own WhatsApp number (scans QR once per account)
+   node send.js --csv remind-tari.csv --session tari --log reminder-tari.csv
+   node send.js --csv remind-iful.csv --session iful --log reminder-iful.csv
    ```
-   The default message lives in `reminder-template.txt` (placeholders
-   `{{name}}`, `{{link}}`, `{{category}}`) — edit it, or pass `--template`.
-   Needs `npm install pg`.
+   `--session` keeps a separate WhatsApp session per account (`.wwebjs_auth-tari`,
+   `.wwebjs_auth-iful`), so you scan each number's QR once and reuse it. Default
+   message in `reminder-template.txt` (placeholders `{{name}}`, `{{link}}`,
+   `{{category}}`). To send inline from the DB in one go instead, add `--send`
+   (and `--session`); `--dry-run` previews. Needs `npm install pg`.
 
 ## Manual export → send (no new guests; bring an existing list up to date)
 
