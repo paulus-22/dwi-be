@@ -1,12 +1,17 @@
-Halo, {{name}},
+Yth. Bapak/Ibu/Saudara/i
+{{name}}
 
-Ini pengingat ramah untuk undangan pernikahan yang sudah kami kirim sebelumnya. 🙏
+Assalamu’alaikum Warahmatullahi Wabarakatuh.
 
-Kalau Anda berkenan hadir, mohon konfirmasi kehadirannya lewat tautan undangan berikut (cukup tekan, pilih Hadir/Tidak Hadir):
+Izinkan kami untuk Mengingatkan kembali bapak/ibu/saudara/i untuk hadir di acara pernikahan kami yang akan diselenggarakan pada:
+📅 Hari/Tanggal: {{date}}
+⏰ Waktu: {{time}}
+📍 Lokasi: {{venue}}
+🗺️ Maps: {{maps}}
 
-{{link}}
+Untuk mempermudah dalam proses pengisian buku tamu digital di meja penerima tamu, Bapak/Ibu/Saudara/i dapat langsung menunjukkan Barcode Masuk melalui tautan berikut (tanpa perlu membuka ulang undangan):
+🔗 {{link}}
 
-Batas konfirmasi bukan maksud untuk menekan — kami hanya butuh perkiraan jumlah tamu untuk persiapan. Kami akan sangat senang bertemu Anda di hari bahagia kami. 🤍
-
-Salam hangat,
-Tari & Saefulloh
+Terima kasih, sampai bertemu di hari bahagia kami. 🤍
+Wassalamu’alaikum Warahmatullahi Wabarakatuh.
+Tari & Iful

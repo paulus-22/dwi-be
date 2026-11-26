@@ -161,7 +161,7 @@ DB from $DATABASE_URL or dwi-be/.env. Requires npm package 'pg'.`);
   args.out = args.out || `reminders-${ev.slug}-${new Date().toISOString().slice(0, 10)}.csv`;
   const lines = rows.map(
     (g) =>
-      `${escCsv(g.name)},${escCsv(g.phone)},${escCsv(g.cat ?? "umum")},${args.siteUrl}/e/${g.slug}?to=${g.code}`,
+      `${escCsv(g.name)},${escCsv(g.phone)},${escCsv(g.cat ?? "umum")},${args.siteUrl}/v/${g.slug}?to=${g.code}`,
   );
   fs.writeFileSync(args.out, lines.join("\n") + "\n");
   console.log(`Wrote ${lines.length} reminder rows to ${args.out}`);

@@ -38,6 +38,7 @@ function parseArgs(argv) {
     else if (a === "--log") args.log = next();
     else if (a === "--limit") args.limit = Number(next());
     else if (a === "--template") args.templatePath = next();
+    else if (a === "--context") args.contextPath = next();
     else if (a === "--session") args.session = next();
     else if (a === "--help" || a === "-h") args.help = true;
     else throw new Error(`Unknown argument: ${a}`);
@@ -66,8 +67,10 @@ Options:
                          send from two numbers (e.g. --session tari and
                          --session iful). Default: .wwebjs_auth.
   --template <path>      Message template file. Placeholders: {{name}},
-                          {{link}}, {{category}}. Default is built into
-                          this script — see DEFAULT_TEMPLATE below.
+                        {{link}}, {{category}}, plus from --context:
+                        {{date}}, {{time}}, {{venue}}, {{maps}}.
+  --context <json>       File with {date,time,venue,maps} to fill the event
+                         placeholders above.
 `;
 
 const DEFAULT_TEMPLATE = `Yth.
@@ -159,11 +162,16 @@ function toWhatsAppId(rawPhone) {
   return `${digits}@c.us`;
 }
 
-function renderTemplate(tpl, guest) {
+function renderTemplate(tpl, guest, ctx = {}) {
   return tpl
     .replaceAll("{{name}}", guest.name)
     .replaceAll("{{link}}", guest.link)
-    .replaceAll("{{category}}", guest.category);
+    .replaceAll("{{category}}", guest.category)
+    .replaceAll("{{date}}", ctx.date || "")
+    .replaceAll("{{time}}", ctx.time || "")
+    .replaceAll("{{venue}}", ctx.venue || "")
+    .replaceAll("{{maps}}", ctx.maps || "")
+    .trim();
 }
 
 function loadSentLog(logPath) {
@@ -204,6 +212,14 @@ async function main() {
   }
 
   const template = args.templatePath ? fs.readFileSync(args.templatePath, "utf8") : DEFAULT_TEMPLATE;
+  let ctx = {};
+  if (args.contextPath) {
+    try {
+      ctx = JSON.parse(fs.readFileSync(args.contextPath, "utf8"));
+    } catch {
+      console.error(`Could not read --context ${args.contextPath}; continuing with empty placeholders.`);
+    }
+  }
   const allGuests = loadGuests(args.csv);
   const sent = loadSentLog(args.log);
   let pending = allGuests.filter((g) => !sent.has(g.phone));
@@ -219,7 +235,7 @@ async function main() {
     console.log("\n--- DRY RUN: no WhatsApp session opened, nothing sent ---\n");
     for (const g of pending) {
       console.log(`→ ${g.name} (${g.phone}, ${g.category}) [${toWhatsAppId(g.phone)}]`);
-      console.log(renderTemplate(template, g));
+      console.log(renderTemplate(template, g, ctx));
       console.log("---");
     }
     return;
@@ -299,7 +315,7 @@ async function main() {
         failCount++;
         continue;
       }
-      await client.sendMessage(jid, renderTemplate(template, g));
+      await client.sendMessage(jid, renderTemplate(template, g, ctx));
       console.log(`✓ ${g.name} (${g.phone}) sent.`);
       appendLog(args.log, g.phone, "sent", "");
       okCount++;
