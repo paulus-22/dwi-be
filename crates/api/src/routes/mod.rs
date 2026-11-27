@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod doorprize;
 pub mod events;
 pub mod forms;
 pub mod live;
@@ -85,7 +86,14 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         // either
         .route("/events/{id}/photos", get(photos::list))
         .route("/events/{id}/live", get(live::stream))
-        .route("/events/{id}/greetings", get(scanner::greetings));
+        .route("/events/{id}/greetings", get(scanner::greetings))
+        // doorprize (read: admin or device; mutate: organizer+)
+        .route("/events/{id}/doorprize", get(doorprize::state))
+        .route(
+            "/events/{id}/doorprize/winners",
+            post(doorprize::record_winner).delete(doorprize::reset_winners),
+        )
+        .route("/events/{id}/doorprize/winners/{winnerId}", delete(doorprize::remove_winner));
 
     Router::new()
         .route("/healthz", get(health))

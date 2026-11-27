@@ -429,11 +429,12 @@ pub struct GreetingsQuery {
     limit: Option<i64>,
 }
 
-/// Durable greeting queue for a TV greeter: every CHECK_IN since `after` (a
-/// `seq`), oldest first. The living SSE gives instant delivery; this endpoint
-/// is the reliable backstop so a TV never misses a welcome even if it was
-/// offline or reconnected late. The TV stores the returned `cursor` and passes
-/// it as `after` next time (same cursor model as `/photos`).
+/// Durable greeting queue for a TV greeter: every CONFIRMED guest selfie since
+/// `after` (a `scanner_photo.seq`), oldest first. A photo row only exists after
+/// the guest takes a picture and taps "Pakai foto" (confirming it) on the
+/// scanner, so the TV greets strictly after photo confirmation — never while
+/// posing, retaking, or waiting. The live SSE `photo` event gives instant
+/// delivery; this endpoint is the reliable Postgres-backed backstop.
 pub async fn greetings(
     State(state): State<AppState>,
     viewer: Viewer,
@@ -442,26 +443,19 @@ pub async fn greetings(
 ) -> ApiResult<Json<Value>> {
     viewer.require_event(&state, event_id).await?;
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
-    // Member name (USHER-typed on a group QR) wins over the household name.
-    // The latest photo for the guest (if any) rides along as `selfie`.
-    let rows: Vec<(i64, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
+    // Member name (usher-typed on a group QR) wins over the household name.
+    let rows: Vec<(i64, Option<String>, Option<String>, Option<String>, DateTime<Utc>)> = sqlx::query_as(
         r#"
-        SELECT s.seq,
-               s.guest_code AS code,
-               COALESCE(NULLIF(ci."memberName", ''), g."householdName") AS name,
-               p.object_key AS photo_key
-        FROM scanner_event s
-        LEFT JOIN "guest" g ON g."id" = s.guest_id
-        LEFT JOIN "check_in" ci ON ci."id" = s.id
-        LEFT JOIN LATERAL (
-            SELECT ph.object_key FROM scanner_photo ph
-            WHERE ph.event_id = s.event_id AND ph.guest_code = s.guest_code
-              AND ph.hidden_at IS NULL
-            ORDER BY ph.occurred_at DESC
-            LIMIT 1
-        ) p ON true
-        WHERE s.event_id = $1 AND s.kind = 'CHECK_IN' AND s.seq > $2
-        ORDER BY s.seq
+        SELECT p.seq,
+               p.guest_code AS code,
+               COALESCE(NULLIF(trim(ci."memberName"), ''), g."householdName") AS name,
+               p.object_key AS photo_key,
+               p.occurred_at
+        FROM scanner_photo p
+        LEFT JOIN "guest" g ON g."id" = p.guest_id
+        LEFT JOIN "check_in" ci ON ci."id" = p.check_in_id
+        WHERE p.event_id = $1 AND p.seq > $2 AND p.hidden_at IS NULL
+        ORDER BY p.seq
         LIMIT $3
         "#,
     )
@@ -480,12 +474,18 @@ pub async fn greetings(
 
     let greetings: Vec<Value> = rows
         .into_iter()
-        .filter_map(|(seq, code, name, photo)| {
+        .filter_map(|(seq, code, name, photo, occurred_at)| {
             let name = name?.trim().to_string();
             if name.is_empty() || seq <= q.after {
                 return None;
             }
-            Some(json!({ "seq": seq, "code": code, "name": name, "selfie": selfie_url(photo) }))
+            Some(json!({
+                "seq": seq,
+                "code": code,
+                "name": name,
+                "selfie": selfie_url(photo),
+                "occurredAt": occurred_at,
+            }))
         })
         .collect();
     let cursor = greetings.last().and_then(|g| g["seq"].as_i64()).unwrap_or(q.after);

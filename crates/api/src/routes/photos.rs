@@ -80,6 +80,15 @@ pub async fn complete(
             .bind(&code)
             .fetch_optional(&state.db)
             .await?;
+    let member_name: Option<String> = if let Some(cid) = body.check_in_id {
+        sqlx::query_scalar(r#"SELECT NULLIF(trim("memberName"), '') FROM "check_in" WHERE "id" = $1"#)
+            .bind(cid)
+            .fetch_optional(&state.db)
+            .await?
+            .flatten()
+    } else {
+        None
+    };
     let occurred = body.occurred_at.min(Utc::now());
     let seq: Option<i64> = sqlx::query_scalar(
         "INSERT INTO scanner_photo (id, event_id, device_id, check_in_id, guest_code, guest_id, object_key, content_type, occurred_at)
@@ -101,8 +110,15 @@ pub async fn complete(
     let url = storage.read_url(&body.key);
     if let Some(seq) = seq {
         let payload = json!({
-            "type": "photo", "id": body.id, "seq": seq, "code": code,
-            "householdName": guest.map(|g| g.1), "url": url, "occurredAt": occurred,
+            "type": "photo",
+            "id": body.id,
+            "seq": seq,
+            "checkInId": body.check_in_id,
+            "code": code,
+            "householdName": guest.map(|g| g.1),
+            "memberName": member_name,
+            "url": url,
+            "occurredAt": occurred,
         });
         state.live.publish(device.event_id, payload.to_string()).await;
     }

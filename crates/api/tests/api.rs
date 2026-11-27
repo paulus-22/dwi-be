@@ -1338,3 +1338,170 @@ async fn public_wishes_are_rate_limited_with_redis(pool: PgPool) {
     assert_eq!(s, StatusCode::TOO_MANY_REQUESTS);
     assert_eq!(b["error"]["code"], "rate_limited");
 }
+
+#[sqlx::test(migrations = false)]
+async fn greetings_only_emit_after_photo_is_confirmed(pool: PgPool) {
+    let app = app_with(pool, true, None).await;
+    let admin = app.login().await;
+    let door = app.pair(&admin, "Pintu Utama").await;
+    let ev = app.demo.event_id;
+    let check_in_id = Uuid::new_v4();
+
+    // 1. Check-in happens BEFORE photo confirmation — greetings queue must remain empty.
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/sync",
+            Some(&door),
+            Some(json!({
+                "checkIns": [{
+                    "id": check_in_id,
+                    "code": app.demo.codes[1],
+                    "headcount": 2,
+                    "occurredAt": chrono::Utc::now(),
+                    "memberName": "Pak Hendra",
+                }],
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+
+    let (s, g) = app.call("GET", &format!("/v1/events/{ev}/greetings?after=0"), Some(&door), None).await;
+    assert_eq!(s, StatusCode::OK, "{g}");
+    assert_eq!(g["greetings"].as_array().unwrap().len(), 0, "must not greet before photo is confirmed");
+
+    // 2. Guest takes a photo and taps "Pakai foto" → presign + POST /v1/photos.
+    let photo_id = Uuid::new_v4();
+    let (s, p) = app
+        .call(
+            "POST",
+            "/v1/uploads/presign",
+            Some(&door),
+            Some(json!({ "photoId": photo_id, "contentType": "image/jpeg" })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{p}");
+    let key = p["key"].as_str().unwrap();
+
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/photos",
+            Some(&door),
+            Some(json!({
+                "id": photo_id,
+                "checkInId": check_in_id,
+                "code": app.demo.codes[1],
+                "key": key,
+                "contentType": "image/jpeg",
+                "occurredAt": chrono::Utc::now(),
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+
+    // 3. Now greetings queue delivers the confirmed entry with memberName + selfie URL.
+    let (s, g) = app.call("GET", &format!("/v1/events/{ev}/greetings?after=0"), Some(&door), None).await;
+    assert_eq!(s, StatusCode::OK, "{g}");
+    let items = g["greetings"].as_array().unwrap();
+    assert_eq!(items.len(), 1);
+    assert_eq!(items[0]["name"], "Pak Hendra");
+    assert_eq!(items[0]["code"], app.demo.codes[1]);
+    assert!(items[0]["selfie"].as_str().unwrap().contains("X-Amz-Signature="));
+    assert!(items[0]["occurredAt"].is_string());
+
+    // Subsequent cursor poll returns nothing new.
+    let cursor = g["cursor"].as_i64().unwrap();
+    let (s, g2) =
+        app.call("GET", &format!("/v1/events/{ev}/greetings?after={cursor}"), Some(&door), None).await;
+    assert_eq!(s, StatusCode::OK, "{g2}");
+    assert_eq!(g2["greetings"].as_array().unwrap().len(), 0);
+}
+
+#[sqlx::test(migrations = false)]
+async fn doorprize_lists_scanned_guests_and_persists_winners(pool: PgPool) {
+    let app = app_with(pool, true, None).await;
+    let admin = app.login().await;
+    let door = app.pair(&admin, "Pintu Utama").await;
+    let ev = app.demo.event_id;
+
+    // Empty before any scans.
+    let (s, d0) = app.call("GET", &format!("/v1/events/{ev}/doorprize"), Some(&admin), None).await;
+    assert_eq!(s, StatusCode::OK, "{d0}");
+    assert_eq!(d0["participants"].as_array().unwrap().len(), 0);
+    assert_eq!(d0["winners"].as_array().unwrap().len(), 0);
+
+    // Check in guest 0 twice (repeat scan must deduplicate) + group guest 1 with 2 distinct members.
+    let c0a = Uuid::new_v4();
+    let c0b = Uuid::new_v4();
+    let c1a = Uuid::new_v4();
+    let c1b = Uuid::new_v4();
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/sync",
+            Some(&door),
+            Some(json!({
+                "checkIns": [
+                    { "id": c0a, "code": app.demo.codes[0], "headcount": 1, "occurredAt": chrono::Utc::now() },
+                    { "id": c0b, "code": app.demo.codes[0], "headcount": 1, "occurredAt": chrono::Utc::now() },
+                    { "id": c1a, "code": app.demo.codes[1], "headcount": 1, "occurredAt": chrono::Utc::now(), "memberName": "Andi" },
+                    { "id": c1b, "code": app.demo.codes[1], "headcount": 1, "occurredAt": chrono::Utc::now(), "memberName": "Budi" },
+                ],
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+
+    let (s, d1) = app.call("GET", &format!("/v1/events/{ev}/doorprize"), Some(&admin), None).await;
+    assert_eq!(s, StatusCode::OK, "{d1}");
+    let participants = d1["participants"].as_array().unwrap();
+    assert_eq!(participants.len(), 3, "guest 0 deduped + 2 group members: {participants:?}");
+
+    // Save a winner.
+    let (s, w) = app
+        .call(
+            "POST",
+            &format!("/v1/events/{ev}/doorprize/winners"),
+            Some(&admin),
+            Some(json!({
+                "checkInId": c1a,
+                "code": app.demo.codes[1],
+                "name": "Andi",
+                "householdName": "Ibu Ratna & Keluarga",
+                "prize": "Grand Prize — Emas 1g",
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::CREATED, "{w}");
+    let winner_id = w["winner"]["id"].as_str().unwrap().to_string();
+    assert_eq!(w["winner"]["name"], "Andi");
+    assert_eq!(w["winner"]["prize"], "Grand Prize — Emas 1g");
+
+    // Winner appears in state.
+    let (s, d2) = app.call("GET", &format!("/v1/events/{ev}/doorprize"), Some(&admin), None).await;
+    assert_eq!(s, StatusCode::OK, "{d2}");
+    assert_eq!(d2["winners"].as_array().unwrap().len(), 1);
+
+    // Delete single winner.
+    let (s, _) = app
+        .call("DELETE", &format!("/v1/events/{ev}/doorprize/winners/{winner_id}"), Some(&admin), None)
+        .await;
+    assert_eq!(s, StatusCode::NO_CONTENT);
+
+    // Re-add then reset all.
+    let (s, _) = app
+        .call(
+            "POST",
+            &format!("/v1/events/{ev}/doorprize/winners"),
+            Some(&admin),
+            Some(json!({ "code": app.demo.codes[0], "name": "Bapak Budi" })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::CREATED);
+    let (s, _) = app.call("DELETE", &format!("/v1/events/{ev}/doorprize/winners"), Some(&admin), None).await;
+    assert_eq!(s, StatusCode::NO_CONTENT);
+
+    let (_, d3) = app.call("GET", &format!("/v1/events/{ev}/doorprize"), Some(&admin), None).await;
+    assert_eq!(d3["winners"].as_array().unwrap().len(), 0);
+}
