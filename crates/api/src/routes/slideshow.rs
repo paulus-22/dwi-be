@@ -218,11 +218,14 @@ pub async fn list(
         })
         .collect();
     // The greeter backdrop a TV shows behind a guest's name on check-in.
-    let greeting_key: Option<String> =
-        sqlx::query_scalar(r#"SELECT "greetingImageKey" FROM "event" WHERE "id" = $1"#)
-            .bind(event_id)
-            .fetch_optional(&state.db)
-            .await?;
+    // greetingImageKey is NULL-able: decode as Option<String> or sqlx throws.
+    let greeting_key: Option<String> = sqlx::query_scalar::<_, Option<String>>(
+        r#"SELECT "greetingImageKey" FROM "event" WHERE "id" = $1"#,
+    )
+    .bind(event_id)
+    .fetch_one(&state.db)
+    .await
+    .unwrap_or(None);
     let greeting = greeting_key.as_deref().map(|k| storage.read_url(k));
     Ok(Json(json!({ "images": images, "greeting": greeting })))
 }
