@@ -1370,7 +1370,7 @@ async fn greetings_only_emit_after_photo_is_confirmed(pool: PgPool) {
     assert_eq!(s, StatusCode::OK, "{g}");
     assert_eq!(g["greetings"].as_array().unwrap().len(), 0, "must not greet before photo is confirmed");
 
-    // 2. Guest takes a photo and taps "Pakai foto" → presign + POST /v1/photos.
+    // 2. Guest takes a photo and taps "Pakai foto" → presign + POST /v1/photos + GREET record.
     let photo_id = Uuid::new_v4();
     let (s, p) = app
         .call(
@@ -1400,7 +1400,31 @@ async fn greetings_only_emit_after_photo_is_confirmed(pool: PgPool) {
         .await;
     assert_eq!(s, StatusCode::OK, "{b}");
 
-    // 3. Now greetings queue delivers the confirmed entry with memberName + selfie URL.
+    // Still not greeted until the explicit GREET signal arrives after confirmation.
+    let (s, g_mid) = app.call("GET", &format!("/v1/events/{ev}/greetings?after=0"), Some(&door), None).await;
+    assert_eq!(s, StatusCode::OK, "{g_mid}");
+    assert_eq!(g_mid["greetings"].as_array().unwrap().len(), 0);
+
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/sync",
+            Some(&door),
+            Some(json!({
+                "records": [{
+                    "id": Uuid::new_v4(),
+                    "checkInId": check_in_id,
+                    "code": app.demo.codes[1],
+                    "type": "GREET",
+                    "occurredAt": chrono::Utc::now(),
+                    "data": { "photoId": photo_id },
+                }],
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+
+    // 3. Now greetings queue delivers the confirmed entry with memberName + optional selfie URL.
     let (s, g) = app.call("GET", &format!("/v1/events/{ev}/greetings?after=0"), Some(&door), None).await;
     assert_eq!(s, StatusCode::OK, "{g}");
     let items = g["greetings"].as_array().unwrap();
@@ -1410,12 +1434,40 @@ async fn greetings_only_emit_after_photo_is_confirmed(pool: PgPool) {
     assert!(items[0]["selfie"].as_str().unwrap().contains("X-Amz-Signature="));
     assert!(items[0]["occurredAt"].is_string());
 
-    // Subsequent cursor poll returns nothing new.
+    // 4. Skipping photo also greets cleanly by name (selfie = null).
+    let skip_ci = Uuid::new_v4();
     let cursor = g["cursor"].as_i64().unwrap();
+    let (s, b) = app
+        .call(
+            "POST",
+            "/v1/sync",
+            Some(&door),
+            Some(json!({
+                "checkIns": [{
+                    "id": skip_ci,
+                    "code": app.demo.codes[0],
+                    "headcount": 1,
+                    "occurredAt": chrono::Utc::now(),
+                }],
+                "records": [{
+                    "id": Uuid::new_v4(),
+                    "checkInId": skip_ci,
+                    "code": app.demo.codes[0],
+                    "type": "GREET",
+                    "occurredAt": chrono::Utc::now(),
+                    "data": { "skippedPhoto": true },
+                }],
+            })),
+        )
+        .await;
+    assert_eq!(s, StatusCode::OK, "{b}");
+
     let (s, g2) =
         app.call("GET", &format!("/v1/events/{ev}/greetings?after={cursor}"), Some(&door), None).await;
     assert_eq!(s, StatusCode::OK, "{g2}");
-    assert_eq!(g2["greetings"].as_array().unwrap().len(), 0);
+    let items2 = g2["greetings"].as_array().unwrap();
+    assert_eq!(items2.len(), 1);
+    assert!(items2[0]["selfie"].is_null());
 }
 
 #[sqlx::test(migrations = false)]

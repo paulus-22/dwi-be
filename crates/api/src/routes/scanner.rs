@@ -340,7 +340,7 @@ pub async fn sync(
 
     for r in &body.records {
         let kind = match r.kind.as_str() {
-            "PHOTO" | "GUESTBOOK" | "SOUVENIR" => r.kind.as_str(),
+            "PHOTO" | "GUESTBOOK" | "SOUVENIR" | "GREET" => r.kind.as_str(),
             _ => {
                 rejected.push(json!({ "id": r.id, "reason": "unknown_type" }));
                 continue;
@@ -354,6 +354,15 @@ pub async fn sync(
         .bind(&code)
         .fetch_optional(&mut *tx)
         .await?;
+        let member_name: Option<String> = if kind == "GREET" {
+            sqlx::query_scalar(r#"SELECT NULLIF(trim("memberName"), '') FROM "check_in" WHERE "id" = $1"#)
+                .bind(r.check_in_id)
+                .fetch_optional(&mut *tx)
+                .await?
+                .flatten()
+        } else {
+            None
+        };
         let occurred = fix(r.occurred_at);
         let data = if r.data.is_object() { r.data.clone() } else { json!({}) };
         let inserted: Option<i64> = sqlx::query_scalar(
@@ -384,7 +393,7 @@ pub async fn sync(
                 occurred_at: occurred,
                 device_name: device.name.clone(),
                 is_override: false,
-                member_name: None,
+                member_name,
             });
         }
         acked.push(r.id);
@@ -429,12 +438,12 @@ pub struct GreetingsQuery {
     limit: Option<i64>,
 }
 
-/// Durable greeting queue for a TV greeter: every CONFIRMED guest selfie since
-/// `after` (a `scanner_photo.seq`), oldest first. A photo row only exists after
-/// the guest takes a picture and taps "Pakai foto" (confirming it) on the
-/// scanner, so the TV greets strictly after photo confirmation — never while
-/// posing, retaking, or waiting. The live SSE `photo` event gives instant
-/// delivery; this endpoint is the reliable Postgres-backed backstop.
+/// Durable greeting queue for a TV greeter: every `GREET` event since `after`
+/// (a `scanner_event.seq`), oldest first. The scanner emits `GREET` strictly
+/// after the guest finishes the photo step (taps "Pakai foto" to confirm their
+/// picture, or skips when photo isn't taken), so the TV never greets while the
+/// guest is still posing or reviewing. By default the TV renders name-only;
+/// `selfie` rides along when a photo exists in case photo display is enabled.
 pub async fn greetings(
     State(state): State<AppState>,
     viewer: Viewer,
@@ -446,16 +455,25 @@ pub async fn greetings(
     // Member name (usher-typed on a group QR) wins over the household name.
     let rows: Vec<(i64, Option<String>, Option<String>, Option<String>, DateTime<Utc>)> = sqlx::query_as(
         r#"
-        SELECT p.seq,
-               p.guest_code AS code,
+        SELECT s.seq,
+               s.guest_code AS code,
                COALESCE(NULLIF(trim(ci."memberName"), ''), g."householdName") AS name,
                p.object_key AS photo_key,
-               p.occurred_at
-        FROM scanner_photo p
-        LEFT JOIN "guest" g ON g."id" = p.guest_id
-        LEFT JOIN "check_in" ci ON ci."id" = p.check_in_id
-        WHERE p.event_id = $1 AND p.seq > $2 AND p.hidden_at IS NULL
-        ORDER BY p.seq
+               s.occurred_at
+        FROM scanner_event s
+        LEFT JOIN "guest" g ON g."id" = s.guest_id
+        LEFT JOIN "check_in" ci ON ci."id" = s.check_in_id
+        LEFT JOIN LATERAL (
+            SELECT ph.object_key
+            FROM scanner_photo ph
+            WHERE ph.event_id = s.event_id
+              AND ph.hidden_at IS NULL
+              AND ph.check_in_id = s.check_in_id
+            ORDER BY ph.occurred_at DESC
+            LIMIT 1
+        ) p ON true
+        WHERE s.event_id = $1 AND s.kind = 'GREET' AND s.seq > $2
+        ORDER BY s.seq
         LIMIT $3
         "#,
     )
