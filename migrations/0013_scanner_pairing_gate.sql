@@ -4,4 +4,4 @@
 -- door pick is ignored for online pairing), so check-ins are attributed to the
 -- correct entrance without the operator choosing on the device.
 ALTER TABLE scanner_pairing_code
-    ADD COLUMN gate TEXT NOT NULL DEFAULT 'Pintu Utama';
+    ADD COLUMN IF NOT EXISTS gate TEXT NOT NULL DEFAULT 'Pintu Utama';
