@@ -30,6 +30,12 @@ pub fn slideshow_key(event_id: Uuid, id: Uuid) -> String {
     format!("events/{event_id}/slideshow/{id}.webp")
 }
 
+/// `events/<event>/greeting/<id>.webp` — the single greeting backdrop for the
+/// TV greeter when a guest is scanned.
+pub fn greeting_key(event_id: Uuid, id: Uuid) -> String {
+    format!("events/{event_id}/greeting/{id}.webp")
+}
+
 fn storage(state: &AppState) -> ApiResult<&Storage> {
     state.storage.as_ref().ok_or_else(|| {
         ApiError::new(
@@ -128,6 +134,68 @@ pub async fn remove(
     Ok(Json(json!({ "id": slide_id, "hidden": true })))
 }
 
+/// Admin: hand the dashboard a URL to PUT the greeting backdrop into R2 (WebP).
+pub async fn presign_greeting(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(id): Path<Uuid>,
+    Json(body): Json<SlideshowPresignBody>,
+) -> ApiResult<Json<Value>> {
+    admin.require_event(&state, id, Role::Organizer).await?;
+    if body.content_type != SLIDESHOW_CONTENT_TYPE {
+        return Err(ApiError::bad_request("unsupported_type", "Backdrop harus WebP."));
+    }
+    let storage = storage(&state)?;
+    let key = greeting_key(id, body.photo_id);
+    let url = storage.presign_put(&key, &body.content_type);
+    Ok(Json(json!({
+        "method": "PUT", "url": url.as_str(), "key": key,
+        "headers": { "content-type": body.content_type },
+        "expiresAt": Utc::now() + UPLOAD_TTL,
+    })))
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GreetingBody {
+    key: String,
+}
+
+/// Admin: set which object is the greeting backdrop for this event.
+pub async fn set_greeting(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(id): Path<Uuid>,
+    Json(body): Json<GreetingBody>,
+) -> ApiResult<Json<Value>> {
+    admin.require_event(&state, id, Role::Organizer).await?;
+    // Only accept keys that point into this event's greeting prefix.
+    let prefix = format!("events/{id}/greeting/");
+    if !(body.key.starts_with(&prefix) && body.key.ends_with(".webp")) {
+        return Err(ApiError::bad_request("invalid_key", "Kunci backdrop tidak cocok."));
+    }
+    sqlx::query(r#"UPDATE "event" SET "greetingImageKey" = $1, "updatedAt" = now() WHERE "id" = $2"#)
+        .bind(&body.key)
+        .bind(id)
+        .execute(&state.db)
+        .await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
+/// Admin: clear the greeting backdrop (falls back to the title card).
+pub async fn remove_greeting(
+    State(state): State<AppState>,
+    AdminUser(admin): AdminUser,
+    Path(id): Path<Uuid>,
+) -> ApiResult<Json<Value>> {
+    admin.require_event(&state, id, Role::Organizer).await?;
+    sqlx::query(r#"UPDATE "event" SET "greetingImageKey" = NULL, "updatedAt" = now() WHERE "id" = $1"#)
+        .bind(id)
+        .execute(&state.db)
+        .await?;
+    Ok(Json(json!({ "ok": true })))
+}
+
 /// Both the dashboard (manage) and any door device (show) read the slideshow.
 pub async fn list(
     State(state): State<AppState>,
@@ -149,5 +217,12 @@ pub async fn list(
             json!({ "id": id, "url": storage.read_url(&key), "contentType": content_type })
         })
         .collect();
-    Ok(Json(json!({ "images": images })))
+    // The greeter backdrop a TV shows behind a guest's name on check-in.
+    let greeting_key: Option<String> =
+        sqlx::query_scalar(r#"SELECT "greetingImageKey" FROM "event" WHERE "id" = $1"#)
+            .bind(event_id)
+            .fetch_optional(&state.db)
+            .await?;
+    let greeting = greeting_key.as_deref().map(|k| storage.read_url(k));
+    Ok(Json(json!({ "images": images, "greeting": greeting })))
 }
