@@ -1,2 +1,5 @@
 /target
 .env
+
+# Invite blast tooling & guest data — kept local, not for the repo
+scripts/wa-invite-sender/
