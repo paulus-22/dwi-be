@@ -444,9 +444,10 @@ pub async fn greetings(
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
     // Member name (USHER-typed on a group QR) wins over the household name.
     // The latest photo for the guest (if any) rides along as `selfie`.
-    let rows: Vec<(i64, Option<String>, Option<String>)> = sqlx::query_as(
+    let rows: Vec<(i64, Option<String>, Option<String>, Option<String>)> = sqlx::query_as(
         r#"
         SELECT s.seq,
+               s.guest_code AS code,
                COALESCE(NULLIF(ci."memberName", ''), g."householdName") AS name,
                p.object_key AS photo_key
         FROM scanner_event s
@@ -479,12 +480,12 @@ pub async fn greetings(
 
     let greetings: Vec<Value> = rows
         .into_iter()
-        .filter_map(|(seq, name, photo)| {
+        .filter_map(|(seq, code, name, photo)| {
             let name = name?.trim().to_string();
             if name.is_empty() || seq <= q.after {
                 return None;
             }
-            Some(json!({ "seq": seq, "name": name, "selfie": selfie_url(photo) }))
+            Some(json!({ "seq": seq, "code": code, "name": name, "selfie": selfie_url(photo) }))
         })
         .collect();
     let cursor = greetings.last().and_then(|g| g["seq"].as_i64()).unwrap_or(q.after);
