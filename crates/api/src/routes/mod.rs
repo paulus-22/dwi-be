@@ -84,7 +84,8 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/events/{id}/greeting", post(slideshow::set_greeting).delete(slideshow::remove_greeting))
         // either
         .route("/events/{id}/photos", get(photos::list))
-        .route("/events/{id}/live", get(live::stream));
+        .route("/events/{id}/live", get(live::stream))
+        .route("/events/{id}/greetings", get(scanner::greetings));
 
     Router::new()
         .route("/healthz", get(health))

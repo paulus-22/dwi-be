@@ -10,14 +10,14 @@
 //!   and corrects `occurredAt` by it.
 
 use axum::Json;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use chrono::{DateTime, Duration, Utc};
 use dwi_domain::normalize_invite_code;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use uuid::Uuid;
 
-use crate::auth::{Device, new_device_token};
+use crate::auth::{Device, Viewer, new_device_token};
 use crate::error::{ApiError, ApiResult};
 use crate::routes::events::{GUEST_SELECT, GuestRow, load_event};
 use crate::state::AppState;
@@ -417,4 +417,76 @@ pub async fn sync(
         "hasMore": has_more,
         "serverNow": now,
     })))
+}
+
+// ----------------------------------------------------------------- greetings
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct GreetingsQuery {
+    #[serde(default)]
+    after: i64,
+    limit: Option<i64>,
+}
+
+/// Durable greeting queue for a TV greeter: every CHECK_IN since `after` (a
+/// `seq`), oldest first. The living SSE gives instant delivery; this endpoint
+/// is the reliable backstop so a TV never misses a welcome even if it was
+/// offline or reconnected late. The TV stores the returned `cursor` and passes
+/// it as `after` next time (same cursor model as `/photos`).
+pub async fn greetings(
+    State(state): State<AppState>,
+    viewer: Viewer,
+    Path(event_id): Path<Uuid>,
+    Query(q): Query<GreetingsQuery>,
+) -> ApiResult<Json<Value>> {
+    viewer.require_event(&state, event_id).await?;
+    let limit = q.limit.unwrap_or(100).clamp(1, 500);
+    // Member name (USHER-typed on a group QR) wins over the household name.
+    // The latest photo for the guest (if any) rides along as `selfie`.
+    let rows: Vec<(i64, Option<String>, Option<String>)> = sqlx::query_as(
+        r#"
+        SELECT s.seq,
+               COALESCE(NULLIF(ci."memberName", ''), g."householdName") AS name,
+               p.object_key AS photo_key
+        FROM scanner_event s
+        LEFT JOIN "guest" g ON g."id" = s.guest_id
+        LEFT JOIN "check_in" ci ON ci."id" = s.id
+        LEFT JOIN LATERAL (
+            SELECT ph.object_key FROM scanner_photo ph
+            WHERE ph.event_id = s.event_id AND ph.guest_code = s.guest_code
+              AND ph.hidden_at IS NULL
+            ORDER BY ph.occurred_at DESC
+            LIMIT 1
+        ) p ON true
+        WHERE s.event_id = $1 AND s.kind = 'CHECK_IN' AND s.seq > $2
+        ORDER BY s.seq
+        LIMIT $3
+        "#,
+    )
+    .bind(event_id)
+    .bind(q.after)
+    .bind(limit)
+    .fetch_all(&state.db)
+    .await?;
+
+    let selfie_url = |key: Option<String>| -> Option<String> {
+        match (state.storage.as_ref(), key) {
+            (Some(st), Some(k)) if !k.is_empty() => Some(st.read_url(&k)),
+            _ => None,
+        }
+    };
+
+    let greetings: Vec<Value> = rows
+        .into_iter()
+        .filter_map(|(seq, name, photo)| {
+            let name = name?.trim().to_string();
+            if name.is_empty() || seq <= q.after {
+                return None;
+            }
+            Some(json!({ "seq": seq, "name": name, "selfie": selfie_url(photo) }))
+        })
+        .collect();
+    let cursor = greetings.last().and_then(|g| g["seq"].as_i64()).unwrap_or(q.after);
+    Ok(Json(json!({ "greetings": greetings, "cursor": cursor })))
 }
