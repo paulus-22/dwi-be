@@ -38,28 +38,35 @@ pub struct PairBody {
 
 pub async fn pair(State(state): State<AppState>, Json(body): Json<PairBody>) -> ApiResult<Json<Value>> {
     let code = body.code.trim().to_uppercase().replace(' ', "");
-    let name = body.device_name.trim();
-    if name.is_empty() || name.chars().count() > 60 {
-        return Err(ApiError::bad_request(
-            "invalid_device_name",
-            "Nama perangkat wajib diisi (maks. 60 karakter).",
-        ));
-    }
-    let found: Option<(Uuid, Uuid)> = sqlx::query_as(
+    let found: Option<(Uuid, Uuid, String)> = sqlx::query_as(
         "UPDATE scanner_pairing_code SET uses = uses + 1, last_used_at = now()
          WHERE code = $1 AND revoked_at IS NULL AND expires_at > now()
-         RETURNING id, event_id",
+         RETURNING id, event_id, gate",
     )
     .bind(&code)
     .fetch_optional(&state.db)
     .await?;
-    let Some((code_id, event_id)) = found else {
+    let Some((code_id, event_id, gate)) = found else {
         return Err(ApiError::new(
             axum::http::StatusCode::NOT_FOUND,
             "invalid_pairing_code",
             "Kode pairing salah atau sudah kedaluwarsa. Minta kode baru ke admin acara.",
         ));
     };
+
+    // The gate is set from the dashboard on the pairing code; it wins over the
+    // device-local door pick so check-ins are credited to the right entrance.
+    let device_name = if gate.trim().is_empty() {
+        body.device_name.trim().to_string()
+    } else {
+        gate.trim().chars().take(60).collect()
+    };
+    if device_name.is_empty() || device_name.chars().count() > 60 {
+        return Err(ApiError::bad_request(
+            "invalid_device_name",
+            "Nama perangkat wajib diisi (maks. 60 karakter).",
+        ));
+    }
 
     let (token, hash) = new_device_token();
     let device_id: Uuid = sqlx::query_scalar(
@@ -68,14 +75,19 @@ pub async fn pair(State(state): State<AppState>, Json(body): Json<PairBody>) -> 
     )
     .bind(event_id)
     .bind(code_id)
-    .bind(name)
+    .bind(&device_name)
     .bind(hash)
     .fetch_one(&state.db)
     .await?;
 
     let event = load_event(&state, event_id).await?;
-    tracing::info!(%event_id, %device_id, device = name, "device paired");
-    Ok(Json(json!({ "event": EventInfo::from(&event), "deviceToken": token, "deviceId": device_id })))
+    tracing::info!(%event_id, %device_id, device = device_name, "device paired");
+    Ok(Json(json!({
+        "event": EventInfo::from(&event),
+        "deviceToken": token,
+        "deviceId": device_id,
+        "deviceName": device_name,
+    })))
 }
 
 // ---------------------------------------------------------------- snapshot

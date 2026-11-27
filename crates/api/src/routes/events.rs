@@ -785,6 +785,9 @@ fn new_pairing_code() -> String {
 #[serde(rename_all = "camelCase")]
 pub struct NewPairingCode {
     label: Option<String>,
+    /// The gate (entrance) this code is bound to, e.g. "Pintu Utama". Shown to
+    /// the device as its name after pairing. Defaults to "Pintu Utama".
+    gate: Option<String>,
     /// Defaults to 24; at most a week.
     valid_hours: Option<i64>,
 }
@@ -798,24 +801,30 @@ pub async fn create_pairing_code(
     admin.require_event(&state, id, Role::Organizer).await?;
     let hours = body.valid_hours.unwrap_or(24).clamp(1, 24 * 7);
     let label = body.label.map(|l| l.trim().to_string()).filter(|l| !l.is_empty());
+    let gate = body
+        .gate
+        .map(|g| g.trim().to_string())
+        .filter(|g| !g.is_empty())
+        .unwrap_or_else(|| "Pintu Utama".to_string());
     // Collisions are astronomically unlikely, but retry rather than 500.
     for _ in 0..5 {
         let code = new_pairing_code();
         let row: Option<(Uuid, DateTime<Utc>)> = sqlx::query_as(
-            "INSERT INTO scanner_pairing_code (event_id, code, label, created_by, expires_at)
-             VALUES ($1, $2, $3, $4, now() + make_interval(hours => $5::int))
+            "INSERT INTO scanner_pairing_code (event_id, code, label, gate, created_by, expires_at)
+             VALUES ($1, $2, $3, $4, $5, now() + make_interval(hours => $6::int))
              ON CONFLICT (code) DO NOTHING
              RETURNING id, expires_at",
         )
         .bind(id)
         .bind(&code)
         .bind(&label)
+        .bind(&gate)
         .bind(admin.id)
         .bind(hours as i32)
         .fetch_optional(&state.db)
         .await?;
         if let Some((pid, expires_at)) = row {
-            return Ok(Json(json!({ "id": pid, "code": code, "label": label, "expiresAt": expires_at })));
+            return Ok(Json(json!({ "id": pid, "code": code, "label": label, "gate": gate, "expiresAt": expires_at })));
         }
     }
     Err(ApiError::Internal(anyhow::anyhow!("could not allocate a pairing code")))
@@ -827,19 +836,19 @@ pub async fn list_pairing_codes(
     Path(id): Path<Uuid>,
 ) -> ApiResult<Json<Value>> {
     admin.require_event(&state, id, Role::Organizer).await?;
-    let rows: Vec<(Uuid, String, Option<String>, DateTime<Utc>, i32, Option<DateTime<Utc>>)> =
+    let rows: Vec<(Uuid, String, Option<String>, String, DateTime<Utc>, i32, Option<DateTime<Utc>>)> =
         sqlx::query_as(
-            "SELECT id, code, label, expires_at, uses, last_used_at FROM scanner_pairing_code
-         WHERE event_id = $1 AND revoked_at IS NULL AND expires_at > now()
-         ORDER BY created_at DESC",
+            "SELECT id, code, label, gate, expires_at, uses, last_used_at FROM scanner_pairing_code
+        WHERE event_id = $1 AND revoked_at IS NULL AND expires_at > now()
+        ORDER BY created_at DESC",
         )
         .bind(id)
         .fetch_all(&state.db)
         .await?;
     let codes: Vec<Value> = rows
         .into_iter()
-        .map(|(id, code, label, expires_at, uses, last_used_at)| {
-            json!({ "id": id, "code": code, "label": label, "expiresAt": expires_at, "uses": uses, "lastUsedAt": last_used_at })
+        .map(|(id, code, label, gate, expires_at, uses, last_used_at)| {
+            json!({ "id": id, "code": code, "label": label, "gate": gate, "expiresAt": expires_at, "uses": uses, "lastUsedAt": last_used_at })
         })
         .collect();
     Ok(Json(json!({ "codes": codes })))
