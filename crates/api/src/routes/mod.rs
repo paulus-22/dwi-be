@@ -8,6 +8,7 @@ pub mod public;
 pub mod public_site;
 pub mod registration;
 pub mod scanner;
+pub mod slideshow;
 pub mod ticket_types;
 
 use axum::Json;
@@ -75,6 +76,10 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/sync", post(scanner::sync))
         .route("/uploads/presign", post(photos::presign))
         .route("/photos", post(photos::complete))
+        // admin: scanner slideshow (dashboard → R2 → device)
+        .route("/events/{id}/slideshow/presign", post(slideshow::presign))
+        .route("/events/{id}/slideshow", post(slideshow::complete).get(slideshow::list))
+        .route("/slideshow/{id}", delete(slideshow::remove))
         // either
         .route("/events/{id}/photos", get(photos::list))
         .route("/events/{id}/live", get(live::stream));
