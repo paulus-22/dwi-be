@@ -696,6 +696,8 @@ pub struct FirstCheckIn {
     pub occurred_at: DateTime<Utc>,
     pub device_name: String,
     pub household_name: Option<String>,
+    /// Group check-in: which member arrived (usher-typed), on the FIRST scan.
+    pub member_name: Option<String>,
 }
 
 /// One row per guest: their earliest check-in from any device.
@@ -703,10 +705,12 @@ pub async fn first_check_ins(state: &AppState, event_id: Uuid) -> ApiResult<Vec<
     Ok(sqlx::query_as::<_, FirstCheckIn>(
         r#"SELECT DISTINCT ON (s.guest_code)
                   s.id, s.guest_code AS code, COALESCE(s.headcount, 1) AS headcount, s.occurred_at,
-                  d.name AS device_name, g."householdName" AS household_name
+                  d.name AS device_name, g."householdName" AS household_name,
+                  ci."memberName" AS member_name
            FROM scanner_event s
            JOIN scanner_device d ON d.id = s.device_id
            LEFT JOIN "guest" g ON g."id" = s.guest_id
+           LEFT JOIN "check_in" ci ON ci."id" = s.id
            WHERE s.event_id = $1 AND s.kind = 'CHECK_IN'
            ORDER BY s.guest_code, s.occurred_at, s.seq"#,
     )
@@ -761,6 +765,7 @@ pub async fn attendance(
         "expectedPeople": expected_people,
         "checkedInHouseholds": checked_in_households,
         "checkedInPeople": checked_in_people,
+        "totalScans": duplicates,
         "repeatScans": duplicates - checked_in_households as i64,
         "byDevice": by_device.into_iter().map(|(name, n)| json!({ "deviceName": name, "checkIns": n })).collect::<Vec<_>>(),
         "recent": first,
