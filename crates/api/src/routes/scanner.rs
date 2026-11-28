@@ -243,6 +243,9 @@ pub struct LiveScan {
     /// GROUP check-in: which member arrived (usher-typed name).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub member_name: Option<String>,
+    /// The guest's DB category (e.g. "vip") — the TV shows a badge when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub category: Option<String>,
 }
 
 pub async fn sync(
@@ -279,8 +282,8 @@ pub async fn sync(
             rejected.push(json!({ "id": c.id, "reason": "invalid" }));
             continue;
         }
-        let guest: Option<(Uuid, String)> = sqlx::query_as(
-            r#"SELECT "id", "householdName" FROM "guest" WHERE "eventId" = $1 AND "token" = $2"#,
+        let guest: Option<(Uuid, String, Option<String>)> = sqlx::query_as(
+            r#"SELECT "id", "householdName", "category" FROM "guest" WHERE "eventId" = $1 AND "token" = $2"#,
         )
         .bind(device.event_id)
         .bind(&code)
@@ -307,7 +310,7 @@ pub async fn sync(
         if let Some(seq) = inserted {
             // Mirror into the old app's table so its admin keeps showing
             // check-ins during the transition. Group member name rides along.
-            if let Some((guest_id, _)) = &guest {
+            if let Some((guest_id, _, _)) = &guest {
                 sqlx::query(
                     r#"INSERT INTO "check_in" ("id", "guestId", "scannedAt", "scannedBy", "guestCount", "memberName")
                        VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT ("id") DO NOTHING"#,
@@ -327,12 +330,13 @@ pub async fn sync(
                 seq,
                 activity: "CHECK_IN".into(),
                 code: code.clone(),
-                household_name: guest.map(|g| g.1),
+                household_name: guest.as_ref().map(|g| g.1.clone()),
                 headcount: Some(c.headcount),
                 occurred_at: occurred,
                 device_name: device.name.clone(),
                 is_override: c.is_override,
                 member_name: name.clone(),
+                category: guest.as_ref().and_then(|g| g.2.clone()),
             });
         }
         acked.push(c.id);
@@ -347,8 +351,8 @@ pub async fn sync(
             }
         };
         let code = normalize_invite_code(&r.code);
-        let guest: Option<(Uuid, String)> = sqlx::query_as(
-            r#"SELECT "id", "householdName" FROM "guest" WHERE "eventId" = $1 AND "token" = $2"#,
+        let guest: Option<(Uuid, String, Option<String>)> = sqlx::query_as(
+            r#"SELECT "id", "householdName", "category" FROM "guest" WHERE "eventId" = $1 AND "token" = $2"#,
         )
         .bind(device.event_id)
         .bind(&code)
@@ -388,12 +392,13 @@ pub async fn sync(
                 seq,
                 activity: kind.to_string(),
                 code,
-                household_name: guest.map(|g| g.1),
+                household_name: guest.as_ref().map(|g| g.1.clone()),
                 headcount: None,
                 occurred_at: occurred,
                 device_name: device.name.clone(),
                 is_override: false,
                 member_name,
+                category: guest.as_ref().and_then(|g| g.2.clone()),
             });
         }
         acked.push(r.id);
@@ -453,13 +458,14 @@ pub async fn greetings(
     viewer.require_event(&state, event_id).await?;
     let limit = q.limit.unwrap_or(100).clamp(1, 500);
     // Member name (usher-typed on a group QR) wins over the household name.
-    let rows: Vec<(i64, Option<String>, Option<String>, Option<String>, DateTime<Utc>)> = sqlx::query_as(
+    let rows: Vec<(i64, Option<String>, Option<String>, Option<String>, DateTime<Utc>, Option<String>)> = sqlx::query_as(
         r#"
         SELECT s.seq,
                s.guest_code AS code,
                COALESCE(NULLIF(trim(ci."memberName"), ''), g."householdName") AS name,
                p.object_key AS photo_key,
-               s.occurred_at
+               s.occurred_at,
+               g."category" AS category
         FROM scanner_event s
         LEFT JOIN "guest" g ON g."id" = s.guest_id
         LEFT JOIN "check_in" ci ON ci."id" = s.check_in_id
@@ -492,7 +498,7 @@ pub async fn greetings(
 
     let greetings: Vec<Value> = rows
         .into_iter()
-        .filter_map(|(seq, code, name, photo, occurred_at)| {
+        .filter_map(|(seq, code, name, photo, occurred_at, category)| {
             let name = name?.trim().to_string();
             if name.is_empty() || seq <= q.after {
                 return None;
@@ -503,6 +509,7 @@ pub async fn greetings(
                 "name": name,
                 "selfie": selfie_url(photo),
                 "occurredAt": occurred_at,
+                "category": category,
             }))
         })
         .collect();
