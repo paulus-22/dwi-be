@@ -87,6 +87,7 @@ pub fn router(state: AppState, cors_origins: &[String]) -> Router {
         .route("/events/{id}/photos", get(photos::list))
         .route("/events/{id}/live", get(live::stream))
         .route("/events/{id}/greetings", get(scanner::greetings))
+        .route("/events/{id}/walkin-guests", post(scanner::add_walkin_guest))
         // doorprize (read: admin or device; mutate: organizer+)
         .route("/events/{id}/doorprize", get(doorprize::state))
         .route(

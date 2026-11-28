@@ -102,6 +102,9 @@ struct SnapshotGuest {
     admits: i32,
     table: Option<String>,
     vip: bool,
+    /// Guest added at the scanner door (not on the invite list).
+    #[serde(default)]
+    is_walk_in: bool,
     /// Group (kelompok) invitation — no per-person pass; usher records a member name.
     #[serde(default)]
     group: bool,
@@ -155,6 +158,7 @@ async fn snapshot_guests(state: &AppState, event_id: Uuid) -> ApiResult<Vec<Snap
                 table: None,
                 group: g.pass_mode == "GROUP",
                 group_cap: g.plus_allowance + 1,
+                is_walk_in: g.is_walk_in,
             }
         })
         .collect();
@@ -515,4 +519,84 @@ pub async fn greetings(
         .collect();
     let cursor = greetings.last().and_then(|g| g["seq"].as_i64()).unwrap_or(q.after);
     Ok(Json(json!({ "greetings": greetings, "cursor": cursor })))
+}
+
+// ------------------------------------------------------------- walk-ins
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WalkInInput {
+    household_name: String,
+    /// Optional guest category ("VIP" / "GEN" ...). Defaults to the generic one.
+    category: Option<String>,
+    /// How many people this walk-in brings. Default 1.
+    #[serde(default = "default_headcount")]
+    headcount: i32,
+}
+
+fn default_headcount() -> i32 {
+    1
+}
+
+/// Add a guest right at the scanner door (walk-in) and make them check-in-able.
+/// Flagged `isWalkIn` so the team can tell newly-added guests from invited ones;
+/// the category (e.g. VIP) can be chosen at the door.
+pub async fn add_walkin_guest(
+    State(state): State<AppState>,
+    device: Device,
+    Path(event_id): Path<Uuid>,
+    Json(body): Json<WalkInInput>,
+) -> ApiResult<Json<Value>> {
+    device.require_event(event_id)?;
+    let name = body.household_name.trim().to_string();
+    if name.is_empty() {
+        return Err(ApiError::bad_request("name_required", "Nama wajib diisi."));
+    }
+    let headcount = body.headcount.clamp(1, 50);
+    let cat = dwi_domain::to_category_code(body.category.as_deref());
+
+    let next_seq: i32 = sqlx::query_scalar(
+        r#"SELECT COALESCE(MAX("sequence"), 0) + 1 FROM "guest" WHERE "eventId" = $1"#,
+    )
+    .bind(event_id)
+    .fetch_one(&state.db)
+    .await?;
+    let prefix: String = sqlx::query_scalar(r#"SELECT "codePrefix" FROM "event" WHERE "id" = $1"#)
+        .bind(event_id)
+        .fetch_one(&state.db)
+        .await?;
+    let token = dwi_domain::build_invite_code(&prefix, cat, next_seq as u32);
+    let guest_id = Uuid::new_v4();
+
+    sqlx::query(
+        r#"INSERT INTO "guest" ("id", "eventId", "householdName", "token", "plusGuestAllowance",
+            "category", "sequence", "isWalkIn", "createdAt", "updatedAt")
+           VALUES ($1, $2, $3, $4, 0, $5, $6, true, now(), now())"#,
+    )
+    .bind(guest_id)
+    .bind(event_id)
+    .bind(&name)
+    .bind(&token)
+    .bind(cat.label())
+    .bind(next_seq)
+    .execute(&state.db)
+    .await?;
+
+    sqlx::query(
+        r#"INSERT INTO "rsvp" ("id", "guestId", "attending", "guestCount", "submittedAt", "updatedAt")
+           VALUES ($1, $2, true, $3, now(), now())"#,
+    )
+    .bind(Uuid::new_v4())
+    .bind(guest_id)
+    .bind(headcount)
+    .execute(&state.db)
+    .await?;
+
+    Ok(Json(json!({
+        "id": guest_id,
+        "code": token,
+        "householdName": name,
+        "category": cat.as_str(),
+        "isWalkIn": true,
+    })))
 }

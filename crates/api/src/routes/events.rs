@@ -512,12 +512,14 @@ pub struct GuestRow {
     pub pass_mode: String,
     pub passcode: Option<String>,
     pub password_required: bool,
+    pub is_walk_in: bool,
 }
 
 pub const GUEST_SELECT: &str = r#"
     SELECT g."id", g."token" AS code, g."householdName" AS household_name, g."category",
            g."plusGuestAllowance" AS plus_allowance, r."attending", r."guestCount" AS rsvp_count,
-           g."passMode"::text AS pass_mode, g."passcode", g."passwordRequired" AS password_required
+           g."passMode"::text AS pass_mode, g."passcode", g."passwordRequired" AS password_required,
+           g."isWalkIn" AS is_walk_in
     FROM "guest" g LEFT JOIN "rsvp" r ON r."guestId" = g."id"
     WHERE g."eventId" = $1
     ORDER BY g."sequence", g."householdName""#;
@@ -595,6 +597,7 @@ pub async fn guests(
                 "code": g.code,
                 "householdName": g.household_name,
                 "category": guest_category(&g.code, g.category.as_deref()).as_str(),
+                "isWalkIn": g.is_walk_in,
                 "attending": g.attending,
                 "admits": guest_admits(g.attending, g.rsvp_count, g.plus_allowance),
                 "passMode": g.pass_mode,
