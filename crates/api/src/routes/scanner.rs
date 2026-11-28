@@ -147,11 +147,18 @@ async fn snapshot_guests(state: &AppState, event_id: Uuid) -> ApiResult<Vec<Snap
     let guests: Vec<SnapshotGuest> = rows
         .into_iter()
         .map(|g| {
-            let category = guest_category(&g.code, g.category.as_deref());
+            let code_cat = guest_category(&g.code, g.category.as_deref());
+            // The greeter reads the dashboard category; the code decides too.
+            // Light the VIP flag when EITHER source says VIP, so a guest set to
+            // VIP in the dashboard but holding a generic code still flags VIP
+            // at the scanner (consistent with the TV).
+            let vip = code_cat == dwi_domain::CategoryCode::Vip
+                || dwi_domain::to_category_code(g.category.as_deref()) == dwi_domain::CategoryCode::Vip;
+            let category = if vip { dwi_domain::CategoryCode::Vip } else { code_cat };
             SnapshotGuest {
                 admits: guest_admits(g.attending, g.rsvp_count, g.plus_allowance),
                 category: category.as_str().to_string(),
-                vip: category == dwi_domain::CategoryCode::Vip,
+                vip,
                 code: g.code,
                 household_name: g.household_name,
                 attending: g.attending,
